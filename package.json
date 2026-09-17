@@ -2,7 +2,6 @@
   "name": "job-hunter-agent",
   "version": "1.0.0",
   "description": "Intelligent Job Hunter Agent powered by Pi & Feishu",
-  "type": "module",
   "scripts": {
     "scan": "tsx scripts/scan-mac.ts",
     "dev": "tsx src/server.ts",

@@ -1,5 +1,10 @@
+"use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -7,10 +12,25 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/storage/index.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
 function isCloudRuntime() {
   return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
@@ -33,10 +53,12 @@ async function readJson(key, fallback) {
 async function writeJson(key, value) {
   await getStorage().write(key, JSON.stringify(value, null, 2));
 }
-var LocalFileStorage, VercelKVStorage, singleton;
+var fs, path, LocalFileStorage, VercelKVStorage, singleton;
 var init_storage = __esm({
   "src/storage/index.ts"() {
     "use strict";
+    fs = __toESM(require("node:fs"));
+    path = __toESM(require("node:path"));
     LocalFileStorage = class {
       kind = "local-fs";
       async read(key) {
@@ -91,11 +113,11 @@ var init_storage = __esm({
 });
 
 // src/modules/tracker/JobTracker.ts
-import * as crypto from "node:crypto";
-var JobTracker;
+var crypto, JobTracker;
 var init_JobTracker = __esm({
   "src/modules/tracker/JobTracker.ts"() {
     "use strict";
+    crypto = __toESM(require("node:crypto"));
     init_storage();
     JobTracker = class {
       dbKey;
@@ -520,12 +542,12 @@ var init_CommutePlanner = __esm({
 });
 
 // src/modules/filter/JobFilter.ts
-import * as fs2 from "node:fs";
-import * as path2 from "node:path";
-var JobFilter;
+var fs2, path2, JobFilter;
 var init_JobFilter = __esm({
   "src/modules/filter/JobFilter.ts"() {
     "use strict";
+    fs2 = __toESM(require("node:fs"));
+    path2 = __toESM(require("node:path"));
     init_ScheduleChecker();
     init_CommutePlanner();
     JobFilter = class {
@@ -1104,12 +1126,12 @@ ${JSON.stringify(profile, null, 2)}`;
 });
 
 // src/modules/tailor/ResumeTailor.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
-var ResumeTailor;
+var fs3, path3, ResumeTailor;
 var init_ResumeTailor = __esm({
   "src/modules/tailor/ResumeTailor.ts"() {
     "use strict";
+    fs3 = __toESM(require("node:fs"));
+    path3 = __toESM(require("node:path"));
     init_LlmClient();
     ResumeTailor = class {
       outputDir;
@@ -1314,13 +1336,13 @@ var init_UrlValidator = __esm({
 });
 
 // src/modules/feishu/FeishuClient.ts
-import "dotenv/config";
-import * as fs4 from "node:fs";
-import * as path4 from "node:path";
-var FeishuNotifier;
+var import_config, fs4, path4, FeishuNotifier;
 var init_FeishuClient = __esm({
   "src/modules/feishu/FeishuClient.ts"() {
     "use strict";
+    import_config = require("dotenv/config");
+    fs4 = __toESM(require("node:fs"));
+    path4 = __toESM(require("node:path"));
     init_CommutePlanner();
     init_UrlValidator();
     FeishuNotifier = class {
@@ -1874,13 +1896,13 @@ var init_ChromePlatformScraper = __esm({
 });
 
 // src/index.ts
-import "dotenv/config";
-import * as fs5 from "node:fs";
-import * as path5 from "node:path";
-var JobHunterCore;
+var import_config2, fs5, path5, JobHunterCore;
 var init_index = __esm({
   "src/index.ts"() {
     "use strict";
+    import_config2 = require("dotenv/config");
+    fs5 = __toESM(require("node:fs"));
+    path5 = __toESM(require("node:path"));
     init_JobTracker();
     init_FeedbackMemory();
     init_JobFilter();
@@ -2079,12 +2101,12 @@ var init_index = __esm({
 });
 
 // src/modules/safety/AntiRiskEngine.ts
-import * as fs6 from "node:fs";
-import * as path6 from "node:path";
-var AntiRiskEngine;
+var fs6, path6, AntiRiskEngine;
 var init_AntiRiskEngine = __esm({
   "src/modules/safety/AntiRiskEngine.ts"() {
     "use strict";
+    fs6 = __toESM(require("node:fs"));
+    path6 = __toESM(require("node:path"));
     init_storage();
     AntiRiskEngine = class _AntiRiskEngine {
       stateKey;
@@ -2239,18 +2261,18 @@ var standalone_exports = {};
 __export(standalone_exports, {
   StandaloneJobHunter: () => StandaloneJobHunter
 });
-import "dotenv/config";
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
-import * as fs9 from "node:fs";
-import * as path9 from "node:path";
-var execAsync, StandaloneJobHunter, entryScript;
+var import_config3, import_node_child_process2, import_node_util, fs9, path9, execAsync, StandaloneJobHunter, entryScript;
 var init_standalone = __esm({
   "src/standalone.ts"() {
     "use strict";
+    import_config3 = require("dotenv/config");
+    import_node_child_process2 = require("node:child_process");
+    import_node_util = require("node:util");
+    fs9 = __toESM(require("node:fs"));
+    path9 = __toESM(require("node:path"));
     init_index();
     init_AntiRiskEngine();
-    execAsync = promisify(exec);
+    execAsync = (0, import_node_util.promisify)(import_node_child_process2.exec);
     StandaloneJobHunter = class {
       agent;
       safety;
@@ -2407,19 +2429,26 @@ var init_standalone = __esm({
   }
 });
 
+// src/api-entry.ts
+var api_entry_exports = {};
+__export(api_entry_exports, {
+  default: () => handler
+});
+module.exports = __toCommonJS(api_entry_exports);
+
 // src/modules/server/CollectorServer.ts
+var http = __toESM(require("node:http"));
+var fs10 = __toESM(require("node:fs"));
+var path10 = __toESM(require("node:path"));
 init_index();
 init_LlmClient();
 init_AntiRiskEngine();
-import * as http from "node:http";
-import * as fs10 from "node:fs";
-import * as path10 from "node:path";
 
 // src/modules/ai/PiSessionCopilot.ts
+var import_path = __toESM(require("path"));
+var import_fs = __toESM(require("fs"));
 init_LlmClient();
 init_storage();
-import path7 from "path";
-import fs7 from "fs";
 var PiSessionCopilot = class _PiSessionCopilot {
   static instance = null;
   session = null;
@@ -2430,7 +2459,7 @@ var PiSessionCopilot = class _PiSessionCopilot {
   fallbackKey = "data/memory/copilot_sessions/fallback_history.json";
   llmClient;
   constructor() {
-    this.sessionDir = path7.resolve(process.cwd(), "data/memory/copilot_sessions");
+    this.sessionDir = import_path.default.resolve(process.cwd(), "data/memory/copilot_sessions");
     this.llmClient = new LlmClient();
   }
   static getInstance() {
@@ -2451,9 +2480,9 @@ var PiSessionCopilot = class _PiSessionCopilot {
     }
     this.isInitializing = true;
     try {
-      if (!fs7.existsSync(this.sessionDir)) {
+      if (!import_fs.default.existsSync(this.sessionDir)) {
         try {
-          fs7.mkdirSync(this.sessionDir, { recursive: true });
+          import_fs.default.mkdirSync(this.sessionDir, { recursive: true });
         } catch {
         }
       }
@@ -2469,14 +2498,14 @@ var PiSessionCopilot = class _PiSessionCopilot {
       const { createAgentSession, SessionManager, DefaultResourceLoader, getAgentDir, ModelRuntime } = piPkg;
       const cwd = process.cwd();
       const agentDir = getAgentDir ? getAgentDir() : cwd;
-      const profilePath = path7.resolve(cwd, "data/profile/master_profile.json");
+      const profilePath = import_path.default.resolve(cwd, "data/profile/master_profile.json");
       let profileGroundTruth = "";
       let candidateName = "\u5019\u9009\u4EBA";
       let candidateTitle = "\u8D44\u6DF1\u4E13\u5BB6";
       let validCompanyList = "";
-      if (fs7.existsSync(profilePath)) {
+      if (import_fs.default.existsSync(profilePath)) {
         try {
-          const prof = JSON.parse(fs7.readFileSync(profilePath, "utf-8"));
+          const prof = JSON.parse(import_fs.default.readFileSync(profilePath, "utf-8"));
           const basic = prof.basicInfo || {};
           const workExp = (prof.workExperiences || []).map((w) => {
             const hls = (w.highlights || []).map((h) => `    * \u3010${h.module}\u3011: ${h.details}`).join("\n");
@@ -2668,11 +2697,11 @@ ${profileGroundTruth}
 };
 
 // src/modules/onboarding/OnboardingService.ts
+var fs8 = __toESM(require("node:fs"));
+var path8 = __toESM(require("node:path"));
+var os = __toESM(require("node:os"));
+var import_node_child_process = require("node:child_process");
 init_storage();
-import * as fs8 from "node:fs";
-import * as path8 from "node:path";
-import * as os from "node:os";
-import { execSync } from "node:child_process";
 var OnboardingService = class {
   statusKey;
   constructor() {
@@ -2802,7 +2831,7 @@ var OnboardingService = class {
       const tempPath = path8.join(os.tmpdir(), `temp_resume_${Date.now()}.pdf`);
       try {
         fs8.writeFileSync(tempPath, buffer);
-        const text = execSync(`pdftotext "${tempPath}" -`, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 });
+        const text = (0, import_node_child_process.execSync)(`pdftotext "${tempPath}" -`, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 });
         return text;
       } catch (e) {
         console.warn("pdftotext \u89E3\u6790 PDF \u5931\u8D25\uFF0C\u5C1D\u8BD5\u964D\u7EA7:", e.message);
@@ -2969,8 +2998,8 @@ ${JSON.stringify(currentRules, null, 2)}`;
 };
 
 // src/modules/auth/AuthService.ts
+var crypto2 = __toESM(require("node:crypto"));
 init_storage();
-import * as crypto2 from "node:crypto";
 var SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
 var MAX_FAILED_ATTEMPTS = 5;
 var FAILED_WINDOW_MS = 15 * 60 * 1e3;
@@ -4488,6 +4517,4 @@ async function handler(req, res) {
   const server = getServerInstance();
   await server.handle(req, res);
 }
-export {
-  handler as default
-};
+if (module.exports && module.exports.default && Object.keys(module.exports).length === 1) { module.exports = module.exports.default; }

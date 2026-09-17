@@ -9,8 +9,9 @@ await build({
   outfile: 'api/entry.js',
   bundle: true,
   platform: 'node',
-  format: 'esm',
+  format: 'cjs',
   target: 'node20',
+  footer: { js: 'if (module.exports && module.exports.default && Object.keys(module.exports).length === 1) { module.exports = module.exports.default; }' }, // 将 {default:fn} 折叠为 fn 本身（注意不能用 exports.default——module.exports 已被重赋值）
   packages: 'external',
   legalComments: 'none',
   logLevel: 'info'
