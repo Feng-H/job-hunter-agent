@@ -13,14 +13,33 @@ export interface StorageAdapter {
   write(key: string, content: string): Promise<void>;
 }
 
-/** 兼容两套环境变量命名：Vercel KV 集成 (KV_REST_API_*) 与 Upstash 官方集成 (UPSTASH_REDIS_REST_*) */
+/** 兼容多套环境变量命名：精确名（KV_REST_API_* / UPSTASH_REDIS_REST_*）与任意前缀变体（如创建存储时用名称做前缀的 XXX_KV_REST_API_*） */
 export function getKvEnvConfig(): { url: string; token: string; source: string } | null {
-  const url1 = process.env.KV_REST_API_URL;
-  const token1 = process.env.KV_REST_API_TOKEN;
-  if (url1 && token1) return { url: url1, token: token1, source: 'KV_REST_API_*' };
-  const url2 = process.env.UPSTASH_REDIS_REST_URL;
-  const token2 = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url2 && token2) return { url: url2, token: token2, source: 'UPSTASH_REDIS_REST_*' };
+  const env = process.env as Record<string, string | undefined>;
+
+  const tryPair = (urlKey: string, tokenKey: string, source: string) => {
+    if (env[urlKey] && env[tokenKey]) {
+      return { url: env[urlKey]!, token: env[tokenKey]!, source };
+    }
+    return null;
+  };
+
+  // 1. 精确名优先
+  const exact =
+    tryPair('KV_REST_API_URL', 'KV_REST_API_TOKEN', 'KV_REST_API_*') ||
+    tryPair('UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'UPSTASH_REDIS_REST_*');
+  if (exact) return exact;
+
+  // 2. 带前缀扫描：XXX_KV_REST_API_URL / XXX_UPSTASH_REDIS_REST_URL（排除只读令牌）
+  for (const key of Object.keys(env)) {
+    const m = key.match(/^(.+_)KV_REST_API_URL$/) || key.match(/^(.+_)UPSTASH_REDIS_REST_URL$/);
+    if (!m) continue;
+    const prefix = m[1];
+    const candidate =
+      tryPair(`${prefix}KV_REST_API_URL`, `${prefix}KV_REST_API_TOKEN`, `prefixed:${prefix}`) ||
+      tryPair(`${prefix}UPSTASH_REDIS_REST_URL`, `${prefix}UPSTASH_REDIS_REST_TOKEN`, `prefixed:${prefix}`);
+    if (candidate) return candidate;
+  }
   return null;
 }
 

@@ -796,15 +796,33 @@ export class CollectorServer {
 
     // 存储诊断：只报告变量名是否存在与当前存储模式，绝不返回任何密钥值
     if (pathname === '/api/diag/storage') {
+      const { getKvEnvConfig } = await import('../../storage/index.js');
+      const kvCfg = getKvEnvConfig();
+      let kvRoundtrip: string = 'skipped-local';
+      if (kvCfg) {
+        try {
+          await writeJson('data/diag/storage_probe', { t: Date.now() });
+          const back = await readJson<{ t: number }>('data/diag/storage_probe', { t: 0 });
+          kvRoundtrip = back.t > 0 ? 'ok' : 'write-lost';
+        } catch (e: any) {
+          kvRoundtrip = `error: ${e.message}`;
+        }
+      }
       return sendJson(200, {
         code: 0,
         storageKind: getStorage().kind,
+        kvSource: kvCfg?.source || null,
         envPresence: {
           KV_REST_API_URL: Boolean(process.env.KV_REST_API_URL),
           KV_REST_API_TOKEN: Boolean(process.env.KV_REST_API_TOKEN),
           UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
           UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
-        }
+        },
+        // 命中带前缀变量时列出其变量名（仅名字）
+        prefixedKvVars: Object.keys(process.env).filter(k =>
+          /KV_REST_API_URL$|UPSTASH_REDIS_REST_URL$/.test(k) && k !== 'KV_REST_API_URL' && k !== 'UPSTASH_REDIS_REST_URL'
+        ),
+        kvRoundtrip
       });
     }
 

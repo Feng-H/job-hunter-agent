@@ -31,13 +31,31 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/storage/index.ts
+var storage_exports = {};
+__export(storage_exports, {
+  getKvEnvConfig: () => getKvEnvConfig,
+  getStorage: () => getStorage,
+  isCloudRuntime: () => isCloudRuntime,
+  readJson: () => readJson,
+  writeJson: () => writeJson
+});
 function getKvEnvConfig() {
-  const url1 = process.env.KV_REST_API_URL;
-  const token1 = process.env.KV_REST_API_TOKEN;
-  if (url1 && token1) return { url: url1, token: token1, source: "KV_REST_API_*" };
-  const url2 = process.env.UPSTASH_REDIS_REST_URL;
-  const token2 = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url2 && token2) return { url: url2, token: token2, source: "UPSTASH_REDIS_REST_*" };
+  const env = process.env;
+  const tryPair = (urlKey, tokenKey, source) => {
+    if (env[urlKey] && env[tokenKey]) {
+      return { url: env[urlKey], token: env[tokenKey], source };
+    }
+    return null;
+  };
+  const exact = tryPair("KV_REST_API_URL", "KV_REST_API_TOKEN", "KV_REST_API_*") || tryPair("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_*");
+  if (exact) return exact;
+  for (const key of Object.keys(env)) {
+    const m = key.match(/^(.+_)KV_REST_API_URL$/) || key.match(/^(.+_)UPSTASH_REDIS_REST_URL$/);
+    if (!m) continue;
+    const prefix = m[1];
+    const candidate = tryPair(`${prefix}KV_REST_API_URL`, `${prefix}KV_REST_API_TOKEN`, `prefixed:${prefix}`) || tryPair(`${prefix}UPSTASH_REDIS_REST_URL`, `${prefix}UPSTASH_REDIS_REST_TOKEN`, `prefixed:${prefix}`);
+    if (candidate) return candidate;
+  }
   return null;
 }
 function isCloudRuntime() {
@@ -4480,15 +4498,33 @@ var CollectorServer = class {
       return;
     }
     if (pathname === "/api/diag/storage") {
+      const { getKvEnvConfig: getKvEnvConfig2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
+      const kvCfg = getKvEnvConfig2();
+      let kvRoundtrip = "skipped-local";
+      if (kvCfg) {
+        try {
+          await writeJson("data/diag/storage_probe", { t: Date.now() });
+          const back = await readJson("data/diag/storage_probe", { t: 0 });
+          kvRoundtrip = back.t > 0 ? "ok" : "write-lost";
+        } catch (e) {
+          kvRoundtrip = `error: ${e.message}`;
+        }
+      }
       return sendJson(200, {
         code: 0,
         storageKind: getStorage().kind,
+        kvSource: kvCfg?.source || null,
         envPresence: {
           KV_REST_API_URL: Boolean(process.env.KV_REST_API_URL),
           KV_REST_API_TOKEN: Boolean(process.env.KV_REST_API_TOKEN),
           UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
           UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
-        }
+        },
+        // 命中带前缀变量时列出其变量名（仅名字）
+        prefixedKvVars: Object.keys(process.env).filter(
+          (k) => /KV_REST_API_URL$|UPSTASH_REDIS_REST_URL$/.test(k) && k !== "KV_REST_API_URL" && k !== "UPSTASH_REDIS_REST_URL"
+        ),
+        kvRoundtrip
       });
     }
     const publicStaticPath = path10.resolve(process.cwd(), "public", pathname.replace(/^\/+/, ""));
