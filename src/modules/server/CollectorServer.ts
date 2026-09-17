@@ -825,7 +825,13 @@ export class CollectorServer {
         prefixedKvVars: Object.keys(process.env).filter(k =>
           /KV_REST_API_URL$|UPSTASH_REDIS_REST_URL$/.test(k) && k !== 'KV_REST_API_URL' && k !== 'UPSTASH_REDIS_REST_URL'
         ),
-        kvDetail
+        kvDetail,
+        llmEnvPresence: {
+          LLM_API_KEY: Boolean(process.env.LLM_API_KEY),
+          LLM_BASE_URL: Boolean(process.env.LLM_BASE_URL),
+          LLM_MODEL: Boolean(process.env.LLM_MODEL)
+        },
+        llmEffective: { hasKey: Boolean(this.llmClient.getConfig().apiKey) }
       });
     }
 

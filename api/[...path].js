@@ -1141,14 +1141,18 @@ ${JSON.stringify(profile, null, 2)}`;
         return data?.choices?.[0]?.message?.content || "";
       }
       async loadConfig() {
-        const loaded = await readJson(this.configKey, {
+        const envDefaults = {
           provider: "openai_compatible",
           apiKey: process.env.LLM_API_KEY || "",
           baseUrl: process.env.LLM_BASE_URL || "https://api.deepseek.com/v1",
           model: process.env.LLM_MODEL || "deepseek-chat",
           temperature: 0.3
-        });
-        this.config = loaded;
+        };
+        const loaded = await readJson(this.configKey, {});
+        this.config = { ...envDefaults, ...loaded };
+        if (!this.config.apiKey && envDefaults.apiKey) this.config.apiKey = envDefaults.apiKey;
+        if (!this.config.baseUrl) this.config.baseUrl = envDefaults.baseUrl;
+        if (!this.config.model) this.config.model = envDefaults.model;
       }
     };
   }
@@ -4526,7 +4530,13 @@ var CollectorServer = class {
         prefixedKvVars: Object.keys(process.env).filter(
           (k) => /KV_REST_API_URL$|UPSTASH_REDIS_REST_URL$/.test(k) && k !== "KV_REST_API_URL" && k !== "UPSTASH_REDIS_REST_URL"
         ),
-        kvDetail
+        kvDetail,
+        llmEnvPresence: {
+          LLM_API_KEY: Boolean(process.env.LLM_API_KEY),
+          LLM_BASE_URL: Boolean(process.env.LLM_BASE_URL),
+          LLM_MODEL: Boolean(process.env.LLM_MODEL)
+        },
+        llmEffective: { hasKey: Boolean(this.llmClient.getConfig().apiKey) }
       });
     }
     const publicStaticPath = path10.resolve(process.cwd(), "public", pathname.replace(/^\/+/, ""));

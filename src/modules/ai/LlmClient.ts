@@ -311,13 +311,20 @@ ${userTweakInstructions ? `【用户的额外微调指令】：${userTweakInstru
   }
 
   private async loadConfig(): Promise<void> {
-    const loaded = await readJson<LlmConfig>(this.configKey, {
+    // 环境变量为兜底默认值；KV 中保存的配置（向导/设置页写入）优先。
+    // 关键规则：KV 配置若缺失 apiKey（空串），回填环境变量——避免「向导存了空 Key」把环境变量配置整个废掉。
+    const envDefaults: LlmConfig = {
       provider: 'openai_compatible',
       apiKey: process.env.LLM_API_KEY || '',
       baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com/v1',
       model: process.env.LLM_MODEL || 'deepseek-chat',
       temperature: 0.3
-    });
-    this.config = loaded;
+    };
+    const loaded = await readJson<Partial<LlmConfig>>(this.configKey, {});
+    this.config = { ...envDefaults, ...loaded };
+
+    if (!this.config.apiKey && envDefaults.apiKey) this.config.apiKey = envDefaults.apiKey;
+    if (!this.config.baseUrl) this.config.baseUrl = envDefaults.baseUrl;
+    if (!this.config.model) this.config.model = envDefaults.model;
   }
 }

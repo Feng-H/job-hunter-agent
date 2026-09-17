@@ -76,7 +76,13 @@
   <header class="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-sm flex-shrink-0 gap-3">
     <div class="flex items-center space-x-4 min-w-0">
       <div class="flex items-center space-x-2.5 flex-shrink-0">
-        <div class="w-7 h-7 bg-slate-800 rounded-md flex items-center justify-center text-white text-sm">🎯</div>
+        <div class="w-7 h-7 bg-slate-800 rounded-md flex items-center justify-center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="7" width="18" height="13" rx="2"/>
+            <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+            <path d="M3 13h18"/>
+          </svg>
+        </div>
         <div>
           <div class="font-semibold text-[15px] text-slate-800 tracking-tight flex items-center gap-2 leading-tight">
             Job-Hunter OS
@@ -90,17 +96,21 @@
 
       <!-- 导航选项卡 -->
       <nav class="flex space-x-0.5 border-l border-slate-200 pl-4 flex-shrink-0">
-        <button id="nav-kanban" onclick="switchView('kanban')" class="px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-800 transition">
-          📊 看板
+        <button id="nav-kanban" onclick="switchView('kanban')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 text-slate-800 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="14" rx="1"/></svg>
+          看板
         </button>
-        <button id="nav-settings" onclick="switchView('settings')" class="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-          ⚙️ 设置
+        <button id="nav-settings" onclick="switchView('settings')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+          设置
         </button>
-        <button id="nav-profile" onclick="switchView('profile')" class="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-          👤 档案
+        <button id="nav-profile" onclick="switchView('profile')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          档案
         </button>
-        <button id="nav-radar" onclick="switchView('radar')" class="px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-          🛰️ 雷达
+        <button id="nav-radar" onclick="switchView('radar')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 12 16.5 7.5"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>
+          雷达
         </button>
       </nav>
     </div>
@@ -113,18 +123,18 @@
           👀 演示模式
         </span>
         <a id="btn-auth-action" href="/login" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white transition">
-          🔑 登录
+          登录
         </a>
       </div>
 
       <a id="btn-onboarding-link" href="/onboarding" class="hidden px-3 py-1.5 rounded-md text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition items-center gap-1">
-        <span>✨ 向导</span>
+        <span>初始化向导</span>
       </a>
       <button onclick="triggerScan()" class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition">
-        ⚡ 扫描
+        扫描
       </button>
       <button onclick="loadJobs()" title="刷新看板" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition">
-        🔄
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
       </button>
     </div>
   </header>
@@ -867,7 +877,7 @@
             roleBadge.innerText = '👀 演示模式';
           }
           if (authBtn) {
-            authBtn.innerText = '🔑 登录';
+            authBtn.innerText = '登录';
             authBtn.href = '/login';
             authBtn.onclick = null;
           }
@@ -879,7 +889,7 @@
             roleBadge.innerText = '👤 管理员: ' + (data.username || 'Admin');
           }
           if (authBtn) {
-            authBtn.innerText = '🚪 退出登录';
+            authBtn.innerText = '退出登录';
             authBtn.href = '#';
             authBtn.onclick = (e) => { e.preventDefault(); doLogout(); };
           }

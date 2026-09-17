@@ -353,7 +353,7 @@
       capsuleEl.style.background = 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)';
       const hhCount = jobs.filter(j => j.sourceType === 'HEADHUNTER').length;
       capsuleEl.innerHTML = `
-        <span style="font-size: 16px;">🎯</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
         <span>发现 <b>${jobs.length}</b> 个岗位${hhCount > 0 ? `（含 ${hhCount} 猎头帖）` : ''}</span>
         <span style="background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 999px; font-size: 11px;">点击一键同步</span>
       `;
