@@ -655,23 +655,37 @@ export class CollectorServer {
             return sendJson(400, { code: -1, error: '消息内容不能为空' });
           }
 
-          if (isDemo) {
-            // Demo 模式：返回高质量模拟回答，绝对不调 LLM API
-            return sendJson(200, {
-              code: 0,
-              reply: `【Demo 演示应答】您好！收到关于“${message.slice(0, 20)}...”的提问。\n\n在真实模式下，系统会调取您专属的 LLM 模型（如 DeepSeek-V3 / GPT-4o），运用 STAR 原则深入剖析您的技术架构亮点与量化业务指标。当前为 Demo 演示环境，已自动隔离私有 API Key。`,
-              status: { sessionId: 'demo-session', messageCount: 2 }
-            });
-          }
-
-          const copilot = PiSessionCopilot.getInstance();
-          const reply = await copilot.prompt(message);
-          const status = await copilot.getStatus();
-          return sendJson(200, { code: 0, reply, status });
-        } catch (e: any) {
-          return sendJson(500, { code: -1, error: e.message });
+        if (isDemo) {
+          // Demo 模式：返回高质量模拟回答，绝对不调 LLM API
+          return sendJson(200, {
+            code: 0,
+            reply: `【Demo 演示应答】您好！收到关于“${message.slice(0, 20)}...”的提问。\n\n在真实模式下，系统会调取您专属的 LLM 模型（如 DeepSeek-V3 / GPT-4o），运用 STAR 原则深入剖析您的技术架构亮点与量化业务指标。当前为 Demo 演示环境，已自动隔离私有 API Key。`,
+            status: { sessionId: 'demo-session', messageCount: 2 }
+          });
         }
-      });
+
+        const copilot = PiSessionCopilot.getInstance();
+        const reply = await copilot.prompt(message);
+        const status = await copilot.getStatus();
+        return sendJson(200, { code: 0, reply, status });
+      } catch (e: any) {
+        return sendJson(500, { code: -1, error: e.message });
+      }
+    });
+
+    // 触发上下文压缩 (Compaction，仅管理员)
+    if (req.method === 'POST' && pathname === '/api/profile/chat/compact') {
+      if (isDemo) {
+        return sendJson(200, { code: 0, success: true, message: '【演示模式】上下文压缩已模拟完成' });
+      }
+      try {
+        const copilot = PiSessionCopilot.getInstance();
+        const resData = await copilot.compactContext();
+        return sendJson(200, { code: 0, ...resData });
+      } catch (e: any) {
+        return sendJson(500, { code: -1, error: e.message });
+      }
+    }
       return;
     }
 
@@ -795,9 +809,23 @@ export class CollectorServer {
     }
 
     // 存储诊断：只报告变量名是否存在与当前存储模式，绝不返回任何密钥值
+    // 未登录访客仅可见基本布尔信息；KV 写探针与变量名细节仅管理员可见（防匿名刷写 KV）
     if (pathname === '/api/diag/storage') {
       const { getKvEnvConfig } = await import('../../storage/index.js');
       const kvCfg = getKvEnvConfig();
+
+      if (isDemo) {
+        return sendJson(200, {
+          code: 0,
+          storageKind: getStorage().kind,
+          llmEnvPresence: {
+            LLM_API_KEY: Boolean(process.env.LLM_API_KEY),
+            LLM_BASE_URL: Boolean(process.env.LLM_BASE_URL),
+            LLM_MODEL: Boolean(process.env.LLM_MODEL)
+          }
+        });
+      }
+
       let kvDetail: any = { roundtrip: 'skipped-local' };
       if (kvCfg) {
         try {
