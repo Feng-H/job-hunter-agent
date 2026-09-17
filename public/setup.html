@@ -77,21 +77,30 @@
         彻底解决书签栏自动隐藏的问题！扩展图标<b>常驻浏览器右上角</b>，突破一切网站 CSP 拦截限制。在 Boss直聘、猎聘、智联浏览时，页面右下角会自动浮现<b>【🎯 发现 N 个岗位 | 点击同步】</b>悬浮小胶囊，翻页自动感知，1 秒入库！
       </p>
 
-      <div class="space-y-3 text-xs bg-white/90 border border-indigo-100 rounded-xl p-4">
-        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
-          <span>🚀 10 秒免编译载入指引：</span>
+      <div class="space-y-3 text-xs bg-white/90 border border-slate-200 rounded-xl p-4">
+        <div class="font-bold text-slate-800 flex items-center gap-1.5">
+          <span>🚀 安装指引（先下载，再载入）：</span>
         </div>
         <ol class="list-decimal list-inside space-y-2 text-slate-700 leading-relaxed">
+          <li>
+            点击下载扩展压缩包：
+            <a href="/extension.zip" download
+               class="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold px-3 py-1 rounded-md no-underline transition align-middle mx-1">
+              ⬇️ 下载 extension.zip
+            </a>
+            <span class="text-slate-500">（约 32 KB，来源为本站）</span>
+          </li>
+          <li>下载完成后<b>解压</b>（Mac 双击 / Windows 右键"全部解压缩"），得到 <code class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono font-bold">extension</code> 文件夹——<b>记住它保存的位置</b>（通常在"下载"目录里）；</li>
           <li>在 Chrome 地址栏输入并回车：<code class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono font-bold select-all">chrome://extensions/</code></li>
           <li>打开页面右上角的 <b>「开发者模式」 (Developer mode)</b> 开关；</li>
-          <li>点击左上角的 <b>「加载已解压的扩展程序」 (Load unpacked)</b>；</li>
-          <li>在弹出的文件窗口中，选中本项目根目录下的 <code class="bg-slate-100 text-indigo-700 font-bold px-2 py-0.5 rounded font-mono">extension</code> 文件夹；</li>
-          <li>点击浏览器右上角扩展拼图图标，把 <b>Job-Hunter 采集助手</b> 固定在工具栏即可！</li>
+          <li>点击左上角的 <b>「加载已解压的扩展程序」 (Load unpacked)</b>，在弹出的文件窗口中选中刚才解压出的 <code class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono font-bold">extension</code> 文件夹；</li>
+          <li>点击浏览器右上角扩展拼图图标 🧩，把 <b>Job-Hunter 采集助手</b> 固定（Pin）到工具栏，完成！</li>
         </ol>
       </div>
 
       <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
         <div>📍 服务地址已自动适配：<span id="service-origin" class="font-mono font-bold text-slate-700">加载中...</span></div>
+        <div>💡 已从 GitHub 克隆仓库的开发者，可直接选用仓库根目录下的 <span class="font-mono font-semibold">extension/</span> 文件夹，效果相同。</div>
       </div>
     </div>
 
