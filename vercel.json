@@ -3,9 +3,8 @@
   "buildCommand": "npm run build",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/auth/(.*)", "destination": "/api" },
-    { "source": "/healthz", "destination": "/api" },
+    { "source": "/auth/(.*)", "destination": "/api/auth/$1" },
+    { "source": "/healthz", "destination": "/api/healthz" },
     { "source": "/demo", "destination": "/index.html" }
   ]
 }

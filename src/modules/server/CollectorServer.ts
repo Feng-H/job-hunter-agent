@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import { JobHunterCore } from '../../index.js';
 import { JobPost } from '../../types/index.js';
 import { LlmClient } from '../ai/LlmClient.js';
-import { StandaloneJobHunter } from '../../standalone.js';
 import { AntiRiskEngine } from '../safety/AntiRiskEngine.js';
 import { PiSessionCopilot } from '../ai/PiSessionCopilot.js';
 import { OnboardingService } from '../onboarding/OnboardingService.js';
@@ -63,7 +62,17 @@ export class CollectorServer {
 
     const host = req.headers.host || `127.0.0.1:${this.port}`;
     const url = new URL(req.url || '/', `http://${host}`);
-    const pathname = url.pathname;
+    let pathname = url.pathname;
+
+    // Vercel rewrite 兼容：/auth/** 与 /healthz 会被重写为 /api/auth/**、/api/healthz 进入本函数，
+    // 函数内 req.url 可能是重写后路径或原始路径，此处统一归一化保证两种都能路由
+    if (pathname.startsWith('/api/')) {
+      const rest = pathname.slice('/api/'.length);
+      if (rest === 'healthz' || rest.startsWith('healthz/') ||
+          rest.startsWith('auth/') || rest === 'bookmarklet.js') {
+        pathname = '/' + rest;
+      }
+    }
 
     const sendJson = (code: number, payload: any, cookie?: string) => {
       const headers: any = { 'Content-Type': 'application/json; charset=utf-8' };
@@ -314,12 +323,13 @@ export class CollectorServer {
       return;
     }
 
-    // 极速扫描（仅管理员可用）
+    // 极速扫描（仅管理员可用；本地专属能力，按需动态加载避免进入云函数冷启动链）
     if (req.method === 'POST' && pathname === '/api/scan') {
       if (isDemo) {
         return sendJson(403, { code: -1, error: '演示模式下禁止触发真实爬虫扫描' });
       }
       try {
+        const { StandaloneJobHunter } = await import('../../standalone.js');
         const standalone = new StandaloneJobHunter();
         const count = await standalone.runSingleScan();
         return sendJson(200, { code: 0, message: `扫描完成，本次共提取并推送了 ${count} 个高匹配职位！` });

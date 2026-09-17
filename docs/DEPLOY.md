@@ -12,7 +12,7 @@
                 │    /  /demo        → index.html（双模式看板）
                 │    /login          → 登录/初始化
                 │    /setup /onboarding
-                └─ Serverless 函数（api/index.ts）
+                └─ Serverless 函数（api/[...path].ts）
                      /api/*  /auth/*  /healthz → CollectorServer.handle()
                      ├─ 认证门：Demo 沙箱 ⇆ Admin 真实管道
                      ├─ 存储：Vercel KV (Upstash REST)

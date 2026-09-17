@@ -51,7 +51,7 @@
 | **严格规则初筛流** | `src/modules/filter/JobFilter.ts` | 双休一票否决、岗位时效（默认 3 个月）、薪资底线、黑名单关键词/公司过滤，规则缺失时内置安全兜底 |
 | **求职状态机** | `src/modules/tracker/JobTracker.ts` | MD5 指纹防重（**URL 归一化**：剔除 query/fragment，列表页与详情页同岗位同指纹）、30 天公司冷却期、全生命周期流转 |
 | 飞书卡片分发 | `src/modules/feishu/FeishuClient.ts` | 审批卡片构建与 Webhook 推送，手机端一键同意/拒绝 |
-| Vercel Serverless 入口 | `api/index.ts` + `vercel.json` | 单函数承载全部 API，`cleanUrls` 静态分发页面，`/api/*`、`/auth/*` 重写进入函数 |
+| Vercel Serverless 入口 | `api/[...path].ts` + `vercel.json` | 单函数承载全部 API，`cleanUrls` 静态分发页面，`/api/*`、`/auth/*` 重写进入函数 |
 
 ### 🤖 Agent 智能体模块（认知与推理）
 

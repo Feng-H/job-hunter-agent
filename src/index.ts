@@ -7,9 +7,9 @@ import { FeedbackMemoryManager } from './modules/tracker/FeedbackMemory.js';
 import { JobFilter } from './modules/filter/JobFilter.js';
 import { ResumeTailor } from './modules/tailor/ResumeTailor.js';
 import { FeishuNotifier } from './modules/feishu/FeishuClient.js';
-import { ChromePlatformScraper } from './modules/discovery/ChromePlatformScraper.js';
 import { ForeignEnterpriseRadar } from './modules/discovery/ForeignEnterpriseRadar.js';
-import { ChromeCDPClient } from './modules/browser/ChromeCDPClient.js';
+// 说明：ChromePlatformScraper / ChromeCDPClient（依赖 playwright-core）仅在本地扫描时按需动态加载，
+// 避免被打进 Vercel 云函数的冷启动依赖链（nft 打包 playwright 易缺文件导致函数崩溃）
 
 export class JobHunterCore {
   private tracker: JobTracker;
@@ -117,6 +117,11 @@ export class JobHunterCore {
   public async runDiscoveryCycle(): Promise<void> {
     console.log('\n🚀 [Job-Hunter] 启动全渠道职位雷达扫描与匹配评估...');
 
+    // playwright 相关模块按需动态加载（仅本地扫描场景触达）
+    const [{ ChromeCDPClient }, { ChromePlatformScraper }] = await Promise.all([
+      import('./modules/browser/ChromeCDPClient.js'),
+      import('./modules/discovery/ChromePlatformScraper.js')
+    ]);
     const cdpClient = new ChromeCDPClient();
     const scraper = new ChromePlatformScraper(cdpClient);
     const foreignRadar = new ForeignEnterpriseRadar();

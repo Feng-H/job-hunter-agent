@@ -166,24 +166,30 @@ export class StandaloneJobHunter {
 }
 
 // 命令行参数路由
-const command = process.argv[2] || 'scan';
-const hunter = new StandaloneJobHunter();
+// 入口守卫：仅当 standalone 本身作为主脚本执行时才启动 CLI 流程，
+// 防止被 CollectorServer / Serverless 函数 import 时在模块加载期自动触发扫描
+const entryScript = process.argv[1] || '';
+if (entryScript.includes('standalone')) {
+  const command = process.argv[2] || 'scan';
+  const hunter = new StandaloneJobHunter();
 
-switch (command) {
-  case 'scan':
-    hunter.runSingleScan().catch(console.error);
-    break;
-  case 'watch':
-    const mins = parseInt(process.argv[3] || '15', 10);
-    hunter.startWatcher(mins).catch(console.error);
-    break;
-  case 'status':
-    hunter.showPipelineStatus();
-    break;
-  default:
-    console.log(`用法:
+  switch (command) {
+    case 'scan':
+      hunter.runSingleScan().catch(console.error);
+      break;
+    case 'watch': {
+      const mins = parseInt(process.argv[3] || '15', 10);
+      hunter.startWatcher(mins).catch(console.error);
+      break;
+    }
+    case 'status':
+      hunter.showPipelineStatus();
+      break;
+    default:
+      console.log(`用法:
   tsx src/standalone.ts scan     # 执行单次极速扫描并推飞书
   tsx src/standalone.ts watch 15 # 启动守护进程，每15分钟轮询巡检
   tsx src/standalone.ts status   # 查看求职看板进度统计`);
-    break;
+      break;
+  }
 }

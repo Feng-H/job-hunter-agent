@@ -1,4 +1,4 @@
-import { chromium, Browser, BrowserContext, Page } from 'playwright-core';
+import type { Browser, BrowserContext, Page } from 'playwright-core';
 
 export interface ChromeCDPOptions {
   cdpUrl?: string; // 默认 http://127.0.0.1:9222
@@ -16,12 +16,17 @@ export class ChromeCDPClient {
 
   /**
    * 尝试连接已启动的 Chrome 实例
+   * playwright-core 通过运行时动态导入（变量模块名阻止打包器静态分析），
+   * 使 Vercel 云函数产物完全不含 playwright 依赖链
    */
   public async connect(): Promise<boolean> {
     try {
       console.log(`🔌 [CDP] 正在连接本地 Chrome 调试端口: ${this.cdpUrl} ...`);
-      this.browser = await chromium.connectOverCDP(this.cdpUrl);
-      const contexts = this.browser.contexts();
+      const pwModuleName = 'playwright-core';
+      const { chromium } = await import(pwModuleName);
+      const browser: Browser = await chromium.connectOverCDP(this.cdpUrl);
+      this.browser = browser;
+      const contexts = browser.contexts();
       if (contexts.length > 0) {
         this.context = contexts[0];
       }

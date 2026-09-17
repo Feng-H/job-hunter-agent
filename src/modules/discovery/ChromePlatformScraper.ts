@@ -1,4 +1,4 @@
-import { Page } from 'playwright-core';
+import type { Page } from 'playwright-core'; // 仅类型引用，打包时被擦除，不进入云函数依赖链
 import { JobPost } from '../../types/index.js';
 import { ChromeCDPClient } from '../browser/ChromeCDPClient.js';
 
