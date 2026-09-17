@@ -22,7 +22,7 @@ export class ChromeCDPClient {
   public async connect(): Promise<boolean> {
     try {
       console.log(`🔌 [CDP] 正在连接本地 Chrome 调试端口: ${this.cdpUrl} ...`);
-      const pwModuleName = 'playwright-core';
+      const pwModuleName = ['playwright', 'core'].join('-'); // join 拼接防止打包器/nft 静态解析
       const { chromium } = await import(pwModuleName);
       const browser: Browser = await chromium.connectOverCDP(this.cdpUrl);
       this.browser = browser;

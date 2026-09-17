@@ -54,7 +54,7 @@ export class PiSessionCopilot {
       // 运行时解析失败会落入 catch 的 LlmClient 降级分支
       let piPkg: any;
       try {
-        const piPkgName = '@earendil-works/pi-coding-agent';
+        const piPkgName = ['@earendil-works', 'pi-coding-agent'].join('/'); // join 拼接防止构建器静态解析
         piPkg = await import(piPkgName);
       } catch (e) {
         // 云端环境或缺少本地依赖时，标记使用 LlmClient 回退引擎

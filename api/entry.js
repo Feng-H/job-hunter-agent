@@ -1659,7 +1659,7 @@ var init_ChromeCDPClient = __esm({
       async connect() {
         try {
           console.log(`\u{1F50C} [CDP] \u6B63\u5728\u8FDE\u63A5\u672C\u5730 Chrome \u8C03\u8BD5\u7AEF\u53E3: ${this.cdpUrl} ...`);
-          const pwModuleName = "playwright-core";
+          const pwModuleName = ["playwright", "core"].join("-");
           const { chromium } = await import(pwModuleName);
           const browser = await chromium.connectOverCDP(this.cdpUrl);
           this.browser = browser;
@@ -2459,7 +2459,7 @@ var PiSessionCopilot = class _PiSessionCopilot {
       }
       let piPkg;
       try {
-        const piPkgName = "@earendil-works/pi-coding-agent";
+        const piPkgName = ["@earendil-works", "pi-coding-agent"].join("/");
         piPkg = await import(piPkgName);
       } catch (e) {
         this.useFallback = true;

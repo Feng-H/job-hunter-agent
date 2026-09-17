@@ -1,0 +1,1705 @@
+{
+  "version": "20260304",
+  "runtime": "node",
+  "runtimeVersion": {
+    "resolved": "24"
+  },
+  "dependencies": [
+    {
+      "name": "@types/dotenv",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^6.1.1",
+      "resolved": "6.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@types/node",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^22.20.3",
+      "resolved": "22.20.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@vercel/node",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^13.0.1",
+      "resolved": "13.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "dotenv",
+      "type": "direct",
+      "scopes": [
+        "prod"
+      ],
+      "requested": "^17.4.2",
+      "resolved": "17.4.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "esbuild",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^0.25.0",
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "playwright-core",
+      "type": "direct",
+      "scopes": [
+        "prod"
+      ],
+      "requested": "^1.63.0",
+      "resolved": "1.63.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "tsx",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^4.19.0",
+      "resolved": "4.23.13",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmjs.org"
+    },
+    {
+      "name": "typescript",
+      "type": "direct",
+      "scopes": [
+        "dev"
+      ],
+      "requested": "^5.5.0",
+      "resolved": "5.9.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmjs.org"
+    },
+    {
+      "name": "@edge-runtime/format",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.2.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@edge-runtime/node-utils",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.3.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@edge-runtime/ponyfill",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.4.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@edge-runtime/primitives",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@edge-runtime/vm",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.2.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@emnapi/core",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "peer",
+        "optional"
+      ],
+      "resolved": "1.11.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@emnapi/runtime",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "peer",
+        "optional"
+      ],
+      "resolved": "1.11.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@emnapi/wasi-threads",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "peer",
+        "optional"
+      ],
+      "resolved": "1.2.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/aix-ppc64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/android-arm",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/android-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/android-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/darwin-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/darwin-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/freebsd-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/freebsd-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-arm",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-ia32",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-loong64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-mips64el",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-ppc64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-riscv64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-s390x",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/linux-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/netbsd-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/netbsd-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/openbsd-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/openbsd-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/openharmony-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/sunos-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/win32-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/win32-ia32",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@esbuild/win32-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.25.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@fastify/busboy",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@isaacs/fs-minipass",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@mapbox/node-pre-gyp",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.0.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@napi-rs/wasm-runtime",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "1.2.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@nodelib/fs.scandir",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.5",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@nodelib/fs.stat",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.0.5",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@nodelib/fs.walk",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.2.8",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-android-arm-eabi",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-android-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-darwin-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-darwin-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-freebsd-x64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-arm-gnueabihf",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-arm-musleabihf",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-arm64-gnu",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-arm64-musl",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-ppc64-gnu",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-riscv64-gnu",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-riscv64-musl",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-s390x-gnu",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-x64-gnu",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-linux-x64-musl",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-openharmony-arm64",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-wasm32-wasi",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-win32-arm64-msvc",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-win32-ia32-msvc",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-parser/binding-win32-x64-msvc",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@oxc-project/types",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@rollup/pluginutils",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.4.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@ts-morph/common",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "0.11.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@tybys/wasm-util",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "0.10.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@types/estree",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.9",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@types/json-schema",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.0.15",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@vercel/build-utils",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "peer"
+      ],
+      "resolved": "14.10.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@vercel/error-utils",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.2.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@vercel/nft",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.10.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "@vercel/static-config",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.4.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "abbrev",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "acorn",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "8.18.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "acorn-import-attributes",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.9.5",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "agent-base",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.1.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "ajv",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "8.6.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "async-listen",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "async-sema",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "balanced-match",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "bindings",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.5.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "brace-expansion",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.0.12",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "braces",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "chownr",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "cjs-module-lexer",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.2.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "code-block-writer",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "10.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "concat-map",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "0.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "consola",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.4.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "convert-hrtime",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "debug",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.4.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "detect-libc",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "edge-runtime",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.5.9",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "es-module-lexer",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "peer"
+      ],
+      "resolved": "1.5.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "estree-walker",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.0.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "etag",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.8.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "fast-deep-equal",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.1.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "fast-glob",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.3.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "fastq",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.20.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "file-uri-to-path",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "fill-range",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "fsevents",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "2.3.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmjs.org"
+    },
+    {
+      "name": "get-tsconfig",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.14.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "glob",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "13.0.6",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "glob-parent",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.1.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "graceful-fs",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.2.11",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "https-proxy-agent",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.0.6",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "is-extglob",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "is-glob",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "is-number",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "json-schema-to-ts",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.6.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "json-schema-traverse",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "lru-cache",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "11.5.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "merge2",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.4.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "micromatch",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.8",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "mime-db",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.52.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "mime-types",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.35",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "minimatch",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "10.2.6",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "minipass",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.1.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "minizlib",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "mkdirp",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "mri",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.2.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "ms",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "node-fetch",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.6.9",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "node-gyp-build",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.8.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "nopt",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "8.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "oxc-parser",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "0.121.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "parse-ms",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "path-browserify",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "path-scurry",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.0.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "path-to-regexp",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "6.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "path-to-regexp-updated",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "6.3.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "picocolors",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "picomatch",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.7",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "pretty-ms",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "punycode",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.3.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "queue-microtask",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.2.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "require-from-string",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "2.0.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "resolve-from",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "resolve-pkg-maps",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "reusify",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.1.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "run-parallel",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "1.2.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "semver",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.8.5",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "signal-exit",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.2",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "tar",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "7.5.22",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "time-span",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "to-regex-range",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "tr46",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "0.0.3",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "ts-morph",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "12.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "ts-toolbelt",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "6.15.5",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "tslib",
+      "type": "transitive",
+      "scopes": [
+        "dev",
+        "optional"
+      ],
+      "resolved": "2.8.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "undici",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.28.4",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "undici-types",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "6.21.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmjs.org"
+    },
+    {
+      "name": "uri-js",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "4.4.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "webidl-conversions",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "3.0.1",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "whatwg-url",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    },
+    {
+      "name": "yallist",
+      "type": "transitive",
+      "scopes": [
+        "dev"
+      ],
+      "resolved": "5.0.0",
+      "source": "registry",
+      "sourceUrl": "https://registry.npmmirror.com"
+    }
+  ]
+}

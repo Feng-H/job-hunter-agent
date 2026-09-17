@@ -6,7 +6,7 @@ import { build } from 'esbuild';
 
 await build({
   entryPoints: ['src/api-entry.ts'],
-  outfile: 'api/[...path].js',
+  outfile: 'api/entry.js',
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -16,4 +16,4 @@ await build({
   logLevel: 'info'
 });
 
-console.log('✅ Vercel 函数预构建完成: api/[...path].js');
+console.log('✅ Vercel 函数预构建完成: api/entry.js');
