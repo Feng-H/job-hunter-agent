@@ -37,6 +37,7 @@ __export(storage_exports, {
   getStorage: () => getStorage,
   isCloudRuntime: () => isCloudRuntime,
   readJson: () => readJson,
+  readJsonStrict: () => readJsonStrict,
   writeJson: () => writeJson
 });
 function getKvEnvConfig() {
@@ -49,7 +50,7 @@ function getKvEnvConfig() {
   };
   const exact = tryPair("KV_REST_API_URL", "KV_REST_API_TOKEN", "KV_REST_API_*") || tryPair("UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_*");
   if (exact) return exact;
-  for (const key of Object.keys(env)) {
+  for (const key of Object.keys(env).sort()) {
     const m = key.match(/^(.+_)KV_REST_API_URL$/) || key.match(/^(.+_)UPSTASH_REDIS_REST_URL$/);
     if (!m) continue;
     const prefix = m[1];
@@ -57,6 +58,31 @@ function getKvEnvConfig() {
     if (candidate) return candidate;
   }
   return null;
+}
+async function fetchWithRetry(url, init, retries = 2) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const resp = await fetch(url, init);
+      if (resp.status === 429 || resp.status >= 500) {
+        lastErr = new Error(`HTTP ${resp.status}`);
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 300 * (attempt + 1) * (attempt + 1)));
+          continue;
+        }
+        return resp;
+      }
+      return resp;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1) * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 function isCloudRuntime() {
   return getKvEnvConfig() !== null;
@@ -75,6 +101,15 @@ async function readJson(key, fallback) {
   } catch (e) {
     console.warn(`[Storage] \u8BFB\u53D6 ${key} \u5F02\u5E38\uFF0C\u4F7F\u7528\u515C\u5E95\u503C:`, e.message);
     return fallback;
+  }
+}
+async function readJsonStrict(key, fallback) {
+  const raw = await getStorage().read(key);
+  if (raw === null || raw === "") return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`${key} \u6570\u636E\u635F\u574F\uFF08JSON \u89E3\u6790\u5931\u8D25\uFF09: ${e.message}`);
   }
 }
 async function writeJson(key, value) {
@@ -114,7 +149,7 @@ var init_storage = __esm({
         this.token = cfg.token;
       }
       async read(key) {
-        const resp = await fetch(`${this.baseUrl}/get/${encodeURIComponent(key)}`, {
+        const resp = await fetchWithRetry(`${this.baseUrl}/get/${encodeURIComponent(key)}`, {
           headers: { Authorization: `Bearer ${this.token}` }
         });
         if (!resp.ok) throw new Error(`KV read failed: HTTP ${resp.status}`);
@@ -123,7 +158,7 @@ var init_storage = __esm({
         return String(data.result);
       }
       async write(key, content) {
-        const resp = await fetch(`${this.baseUrl}/set/${encodeURIComponent(key)}`, {
+        const resp = await fetchWithRetry(`${this.baseUrl}/set/${encodeURIComponent(key)}`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${this.token}`,
@@ -3041,6 +3076,8 @@ var AuthService = class {
   stateKey;
   state;
   ready;
+  /** 状态加载失败标记：为 true 时禁止注册/登录，防止把"读不到"误当"空库"覆盖真实数据 */
+  stateLoadFailed = false;
   constructor() {
     this.stateKey = "data/auth/auth_state.json";
     this.state = { accounts: [], sessions: [], failedAttempts: {} };
@@ -3050,17 +3087,26 @@ var AuthService = class {
     await this.ready;
   }
   async loadState() {
-    const loaded = await readJson(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
-    this.state = {
-      accounts: loaded.accounts || [],
-      sessions: loaded.sessions || [],
-      failedAttempts: loaded.failedAttempts || {}
-    };
+    try {
+      const loaded = await readJsonStrict(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
+      this.state = {
+        accounts: loaded.accounts || [],
+        sessions: loaded.sessions || [],
+        failedAttempts: loaded.failedAttempts || {}
+      };
+      this.stateLoadFailed = false;
+    } catch (e) {
+      this.stateLoadFailed = true;
+      console.error("[Auth] \u8D26\u53F7\u5E93\u8BFB\u53D6\u5931\u8D25\uFF0C\u5DF2\u9501\u5B9A\u6CE8\u518C/\u767B\u5F55\u4EE5\u9632\u8986\u76D6\u771F\u5B9E\u6570\u636E:", e.message);
+    }
     this.cleanupExpiredSessions();
   }
-  /** 是否处于首次初始化模式（尚无任何账号） */
+  /** 是否处于首次初始化模式（尚无任何账号）；读取失败时永远返回 false（不许注册） */
   isSetupMode() {
-    return this.state.accounts.length === 0;
+    return !this.stateLoadFailed && this.state.accounts.length === 0;
+  }
+  storageHealth() {
+    return this.stateLoadFailed ? { ok: false, error: "\u8D26\u53F7\u5E93\u8BFB\u53D6\u5931\u8D25\uFF08KV \u5F02\u5E38\uFF09\uFF0C\u6CE8\u518C\u4E0E\u767B\u5F55\u5DF2\u4E34\u65F6\u9501\u5B9A\u4EE5\u4FDD\u62A4\u6570\u636E" } : { ok: true, error: null };
   }
   hasAccount(username) {
     return this.state.accounts.some((a) => a.username === username);
@@ -3068,17 +3114,28 @@ var AuthService = class {
   hashPassword(password, salt) {
     return crypto2.scryptSync(password, salt, 64).toString("hex");
   }
-  save() {
-    void writeJson(this.stateKey, this.state);
+  /** 关键写入：await 真正落库，失败向上抛错（绝不假成功） */
+  async persist() {
+    await writeJson(this.stateKey, this.state);
+  }
+  /** 非关键写入（会话清理/限流计数）：后台执行，失败仅记日志 */
+  persistBackground() {
+    writeJson(this.stateKey, this.state).catch(
+      (e) => console.error("[Auth] \u540E\u53F0\u6301\u4E45\u5316\u5931\u8D25\uFF08\u4F1A\u8BDD/\u9650\u6D41\u8BA1\u6570\u53EF\u80FD\u672A\u843D\u5E93\uFF09:", e.message)
+    );
   }
   getAccount(username) {
     return this.state.accounts.find((a) => a.username === username);
   }
   /**
    * 首次初始化：创建管理员账号（仅在无任何账号时可用）
+   * 硬保证：写入云端成功且回读校验通过才算创建成功，否则回滚并明确报错。
    */
-  createAccount(username, password) {
+  async createAccount(username, password) {
     username = (username || "").trim();
+    if (this.stateLoadFailed) {
+      return { ok: false, message: "\u4E91\u7AEF\u8D26\u53F7\u5E93\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\uFF0C\u4E3A\u4FDD\u62A4\u6570\u636E\u5DF2\u9501\u5B9A\u6CE8\u518C\uFF0C\u8BF7\u7A0D\u540E\u5237\u65B0\u91CD\u8BD5" };
+    }
     if (this.state.accounts.length > 0) {
       return { ok: false, message: "\u7CFB\u7EDF\u5DF2\u521D\u59CB\u5316\uFF0C\u7981\u6B62\u91CD\u590D\u521B\u5EFA\u8D26\u53F7\uFF0C\u8BF7\u76F4\u63A5\u767B\u5F55" };
     }
@@ -3100,14 +3157,33 @@ var AuthService = class {
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     this.state.accounts.push(account);
-    this.save();
-    const token = this.issueSession(username);
-    return { ok: true, message: `\u7BA1\u7406\u5458\u8D26\u53F7\u3010${username}\u3011\u521B\u5EFA\u6210\u529F`, sessionToken: token, username };
+    try {
+      await this.persist();
+    } catch (e) {
+      this.state.accounts.pop();
+      console.error("[Auth] \u8D26\u53F7\u5199\u5165\u4E91\u7AEF\u5931\u8D25:", e.message);
+      return { ok: false, message: `\u8D26\u53F7\u521B\u5EFA\u5931\u8D25\uFF1A\u4E91\u7AEF\u6570\u636E\u5E93\u5199\u5165\u9519\u8BEF\uFF08${e.message}\uFF09\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\uFF0C\u4E0D\u4F1A\u4EA7\u751F\u534A\u6210\u54C1\u8D26\u53F7` };
+    }
+    try {
+      const verified = await readJsonStrict(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
+      if (!verified.accounts.some((a) => a.username === username)) {
+        this.state.accounts.pop();
+        console.error("[Auth] \u56DE\u8BFB\u6821\u9A8C\u5931\u8D25\uFF1A\u8D26\u53F7\u672A\u5728\u4E91\u7AEF\u751F\u6548");
+        return { ok: false, message: "\u8D26\u53F7\u521B\u5EFA\u5931\u8D25\uFF1A\u5199\u5165\u540E\u56DE\u8BFB\u6821\u9A8C\u672A\u901A\u8FC7\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" };
+      }
+    } catch (e) {
+      console.error("[Auth] \u56DE\u8BFB\u6821\u9A8C\u5F02\u5E38\uFF08\u8D26\u53F7\u5927\u6982\u7387\u5DF2\u5199\u5165\uFF09:", e.message);
+    }
+    const token = await this.issueSession(username);
+    return { ok: true, message: `\u7BA1\u7406\u5458\u8D26\u53F7\u3010${username}\u3011\u521B\u5EFA\u6210\u529F\uFF08\u5DF2\u786E\u8BA4\u6301\u4E45\u5316\u5230\u4E91\u7AEF\uFF09`, sessionToken: token, username };
   }
   /**
    * 登录校验（含失败次数限流）
    */
-  login(username, password, clientIp = "unknown") {
+  async login(username, password, clientIp = "unknown") {
+    if (this.stateLoadFailed) {
+      return { ok: false, message: "\u4E91\u7AEF\u8D26\u53F7\u5E93\u6682\u65F6\u65E0\u6CD5\u8BFB\u53D6\uFF0C\u767B\u5F55\u5DF2\u4E34\u65F6\u9501\u5B9A\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" };
+    }
     username = (username || "").trim();
     const throttleKey = `${username}@${clientIp}`;
     const attempts = this.state.failedAttempts[throttleKey];
@@ -3125,15 +3201,14 @@ var AuthService = class {
       rec.count += 1;
       rec.lastAt = (/* @__PURE__ */ new Date()).toISOString();
       this.state.failedAttempts[throttleKey] = rec;
-      this.save();
+      this.persistBackground();
       return { ok: false, message: "\u7528\u6237\u540D\u6216\u5BC6\u7801\u9519\u8BEF" };
     }
     delete this.state.failedAttempts[throttleKey];
-    this.save();
-    const token = this.issueSession(username);
+    const token = await this.issueSession(username);
     return { ok: true, message: "\u767B\u5F55\u6210\u529F", sessionToken: token, username };
   }
-  issueSession(username) {
+  async issueSession(username) {
     const token = crypto2.randomBytes(32).toString("hex");
     this.state.sessions.push({
       tokenHash: crypto2.createHash("sha256").update(token).digest("hex"),
@@ -3144,7 +3219,11 @@ var AuthService = class {
     if (this.state.sessions.length > 10) {
       this.state.sessions = this.state.sessions.slice(-10);
     }
-    this.save();
+    try {
+      await this.persist();
+    } catch (e) {
+      console.error("[Auth] \u4F1A\u8BDD\u6301\u4E45\u5316\u5931\u8D25\uFF08\u5B9E\u4F8B\u56DE\u6536\u540E\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u767B\u5F55\uFF09:", e.message);
+    }
     return token;
   }
   /**
@@ -3157,16 +3236,20 @@ var AuthService = class {
     const session = this.state.sessions.find((s) => s.tokenHash === tokenHash);
     return session ? session.username : null;
   }
-  logout(token) {
+  async logout(token) {
     if (!token) return;
     const tokenHash = crypto2.createHash("sha256").update(token).digest("hex");
     this.state.sessions = this.state.sessions.filter((s) => s.tokenHash !== tokenHash);
-    this.save();
+    try {
+      await this.persist();
+    } catch (e) {
+      console.error("[Auth] \u767B\u51FA\u6301\u4E45\u5316\u5931\u8D25\uFF08\u4F1A\u8BDD\u6700\u8FDF 7 \u5929\u81EA\u52A8\u8FC7\u671F\uFF09:", e.message);
+    }
   }
   /**
    * 修改密码（修改后吊销全部既有会话）
    */
-  changePassword(username, oldPassword, newPassword) {
+  async changePassword(username, oldPassword, newPassword) {
     const account = this.getAccount(username);
     if (!account) return { ok: false, message: "\u8D26\u53F7\u4E0D\u5B58\u5728" };
     if (this.hashPassword(oldPassword || "", account.salt) !== account.hash) {
@@ -3179,8 +3262,12 @@ var AuthService = class {
     account.salt = salt;
     account.hash = this.hashPassword(newPassword, salt);
     this.state.sessions = this.state.sessions.filter((s) => s.username !== username);
-    this.save();
-    const token = this.issueSession(username);
+    try {
+      await this.persist();
+    } catch (e) {
+      return { ok: false, message: `\u5BC6\u7801\u4FEE\u6539\u5931\u8D25\uFF1A\u4E91\u7AEF\u5199\u5165\u9519\u8BEF\uFF08${e.message}\uFF09\uFF0C\u539F\u5BC6\u7801\u4ECD\u6709\u6548` };
+    }
+    const token = await this.issueSession(username);
     return { ok: true, message: "\u5BC6\u7801\u4FEE\u6539\u6210\u529F\uFF0C\u5DF2\u81EA\u52A8\u7EED\u671F\u767B\u5F55", sessionToken: token, username };
   }
   /**
@@ -3197,18 +3284,22 @@ var AuthService = class {
   /**
    * 重置书签采集令牌（旧令牌立即失效）
    */
-  regenerateCollectorToken(username) {
+  async regenerateCollectorToken(username) {
     const account = this.getAccount(username);
     if (!account) return { ok: false, message: "\u8D26\u53F7\u4E0D\u5B58\u5728" };
     account.collectorToken = crypto2.randomBytes(24).toString("hex");
-    this.save();
+    try {
+      await this.persist();
+    } catch (e) {
+      return { ok: false, message: `\u4EE4\u724C\u91CD\u7F6E\u5931\u8D25\uFF1A\u4E91\u7AEF\u5199\u5165\u9519\u8BEF\uFF08${e.message}\uFF09\uFF0C\u65E7\u4EE4\u724C\u4ECD\u6709\u6548` };
+    }
     return { ok: true, message: "\u91C7\u96C6\u4EE4\u724C\u5DF2\u91CD\u7F6E\uFF0C\u8BF7\u91CD\u65B0\u5B89\u88C5\u4E66\u7B7E", username };
   }
   cleanupExpiredSessions() {
     const now = Date.now();
     const before = this.state.sessions.length;
     this.state.sessions = this.state.sessions.filter((s) => new Date(s.expiresAt).getTime() > now);
-    if (this.state.sessions.length !== before) this.save();
+    if (this.state.sessions.length !== before) this.persistBackground();
   }
 };
 
@@ -3907,26 +3998,29 @@ var CollectorServer = class {
             const setupMode = this.auth.isSetupMode();
             const username = this.auth.validateSession(this.parseSessionCookie(req));
             const isDemo2 = !Boolean(username);
+            const storage = this.auth.storageHealth();
             return sendJson(200, {
               code: 0,
               setupMode,
               loggedIn: Boolean(username),
               username: username || null,
-              isDemo: isDemo2
+              isDemo: isDemo2,
+              storageOk: storage.ok,
+              storageError: storage.error
             });
           }
           if (req.method === "POST" && pathname === "/auth/setup") {
-            const result = this.auth.createAccount(data.username, data.password);
+            const result = await this.auth.createAccount(data.username, data.password);
             const cookie = result.sessionToken ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax` : void 0;
             return sendJson(result.ok ? 200 : 400, { code: result.ok ? 0 : -1, message: result.message }, cookie);
           }
           if (req.method === "POST" && pathname === "/auth/login") {
-            const result = this.auth.login(data.username, data.password, ip);
+            const result = await this.auth.login(data.username, data.password, ip);
             const cookie = result.sessionToken ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax` : void 0;
             return sendJson(result.ok ? 200 : 401, { code: result.ok ? 0 : -1, message: result.message }, cookie);
           }
           if (req.method === "POST" && pathname === "/auth/logout") {
-            this.auth.logout(this.parseSessionCookie(req));
+            await this.auth.logout(this.parseSessionCookie(req));
             const cookie = `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
             return sendJson(200, { code: 0, message: "\u5DF2\u5B89\u5168\u9000\u51FA\u767B\u5F55" }, cookie);
           }
@@ -3935,7 +4029,7 @@ var CollectorServer = class {
             return sendJson(401, { code: -1, message: "\u8BF7\u5148\u767B\u5F55\u7BA1\u7406\u5458\u8D26\u53F7" });
           }
           if (req.method === "POST" && pathname === "/auth/change-password") {
-            const result = this.auth.changePassword(sessionUser2, data.oldPassword, data.newPassword);
+            const result = await this.auth.changePassword(sessionUser2, data.oldPassword, data.newPassword);
             const cookie = result.sessionToken ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax` : void 0;
             return sendJson(result.ok ? 200 : 400, { code: result.ok ? 0 : -1, message: result.message }, cookie);
           }
@@ -3947,7 +4041,7 @@ var CollectorServer = class {
             });
           }
           if (req.method === "POST" && pathname === "/auth/collector-token/regenerate") {
-            const result = this.auth.regenerateCollectorToken(sessionUser2);
+            const result = await this.auth.regenerateCollectorToken(sessionUser2);
             return sendJson(result.ok ? 200 : 400, {
               code: result.ok ? 0 : -1,
               message: result.message,

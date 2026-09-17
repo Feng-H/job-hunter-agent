@@ -116,17 +116,20 @@ export class CollectorServer {
             const setupMode = this.auth.isSetupMode();
             const username = this.auth.validateSession(this.parseSessionCookie(req));
             const isDemo = !Boolean(username);
+            const storage = this.auth.storageHealth();
             return sendJson(200, {
               code: 0,
               setupMode,
               loggedIn: Boolean(username),
               username: username || null,
-              isDemo
+              isDemo,
+              storageOk: storage.ok,
+              storageError: storage.error
             });
           }
 
           if (req.method === 'POST' && pathname === '/auth/setup') {
-            const result = this.auth.createAccount(data.username, data.password);
+            const result = await this.auth.createAccount(data.username, data.password);
             const cookie = result.sessionToken
               ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
               : undefined;
@@ -134,7 +137,7 @@ export class CollectorServer {
           }
 
           if (req.method === 'POST' && pathname === '/auth/login') {
-            const result = this.auth.login(data.username, data.password, ip);
+            const result = await this.auth.login(data.username, data.password, ip);
             const cookie = result.sessionToken
               ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
               : undefined;
@@ -142,7 +145,7 @@ export class CollectorServer {
           }
 
           if (req.method === 'POST' && pathname === '/auth/logout') {
-            this.auth.logout(this.parseSessionCookie(req));
+            await this.auth.logout(this.parseSessionCookie(req));
             const cookie = `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
             return sendJson(200, { code: 0, message: '已安全退出登录' }, cookie);
           }
@@ -154,7 +157,7 @@ export class CollectorServer {
           }
 
           if (req.method === 'POST' && pathname === '/auth/change-password') {
-            const result = this.auth.changePassword(sessionUser, data.oldPassword, data.newPassword);
+            const result = await this.auth.changePassword(sessionUser, data.oldPassword, data.newPassword);
             const cookie = result.sessionToken
               ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
               : undefined;
@@ -170,7 +173,7 @@ export class CollectorServer {
           }
 
           if (req.method === 'POST' && pathname === '/auth/collector-token/regenerate') {
-            const result = this.auth.regenerateCollectorToken(sessionUser);
+            const result = await this.auth.regenerateCollectorToken(sessionUser);
             return sendJson(result.ok ? 200 : 400, {
               code: result.ok ? 0 : -1,
               message: result.message,

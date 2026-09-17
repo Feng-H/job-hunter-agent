@@ -31,7 +31,8 @@ export function getKvEnvConfig(): { url: string; token: string; source: string }
   if (exact) return exact;
 
   // 2. 带前缀扫描：XXX_KV_REST_API_URL / XXX_UPSTASH_REDIS_REST_URL（排除只读令牌）
-  for (const key of Object.keys(env)) {
+  //    按 key 排序保证确定性：即使误连了多个库，所有实例/部署也始终选中同一个
+  for (const key of Object.keys(env).sort()) {
     const m = key.match(/^(.+_)KV_REST_API_URL$/) || key.match(/^(.+_)UPSTASH_REDIS_REST_URL$/);
     if (!m) continue;
     const prefix = m[1];
@@ -41,6 +42,33 @@ export function getKvEnvConfig(): { url: string; token: string; source: string }
     if (candidate) return candidate;
   }
   return null;
+}
+
+/** Upstash REST 带重试：429 限流 / 5xx / 网络错误自动重试 2 次（300ms/900ms 退避），避免瞬时故障导致静默丢数据 */
+async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const resp = await fetch(url, init);
+      if (resp.status === 429 || resp.status >= 500) {
+        lastErr = new Error(`HTTP ${resp.status}`);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 300 * (attempt + 1) * (attempt + 1)));
+          continue;
+        }
+        return resp;
+      }
+      return resp;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1) * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export function isCloudRuntime(): boolean {
@@ -80,7 +108,7 @@ class VercelKVStorage implements StorageAdapter {
   }
 
   async read(key: string): Promise<string | null> {
-    const resp = await fetch(`${this.baseUrl}/get/${encodeURIComponent(key)}`, {
+    const resp = await fetchWithRetry(`${this.baseUrl}/get/${encodeURIComponent(key)}`, {
       headers: { Authorization: `Bearer ${this.token}` }
     });
     if (!resp.ok) throw new Error(`KV read failed: HTTP ${resp.status}`);
@@ -90,7 +118,7 @@ class VercelKVStorage implements StorageAdapter {
   }
 
   async write(key: string, content: string): Promise<void> {
-    const resp = await fetch(`${this.baseUrl}/set/${encodeURIComponent(key)}`, {
+    const resp = await fetchWithRetry(`${this.baseUrl}/set/${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.token}`,
@@ -122,6 +150,20 @@ export async function readJson<T>(key: string, fallback: T): Promise<T> {
   } catch (e) {
     console.warn(`[Storage] 读取 ${key} 异常，使用兜底值:`, (e as Error).message);
     return fallback;
+  }
+}
+
+/**
+ * 严格读取：仅当键确实不存在时返回兜底值；读取失败或数据损坏时抛错。
+ * 用于账号等关键状态——读失败绝不能假装"空库"，否则会诱发误初始化覆盖真实数据。
+ */
+export async function readJsonStrict<T>(key: string, fallback: T): Promise<T> {
+  const raw = await getStorage().read(key);
+  if (raw === null || raw === '') return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    throw new Error(`${key} 数据损坏（JSON 解析失败）: ${(e as Error).message}`);
   }
 }
 
