@@ -1,4 +1,13 @@
 (function () {
+  // 自动识别脚本来源：支持本地 (127.0.0.1:8765) 与云端部署两种场景，令牌由书签 URL 携带
+  const scriptEl = document.currentScript || (function () {
+    const scripts = document.querySelectorAll('script[src*="bookmarklet.js"]');
+    return scripts[scripts.length - 1];
+  })();
+  const srcUrl = new URL(scriptEl ? scriptEl.src : 'http://127.0.0.1:8765/bookmarklet.js', location.href);
+  const API_BASE = srcUrl.origin;
+  const API_TOKEN = srcUrl.searchParams.get('token') || '';
+
   const host = window.location.hostname;
   let jobs = [];
 
@@ -121,16 +130,19 @@
 
   showToast(`🚀 已提取 ${jobs.length} 个岗位，正在发送给 Agent 严格初筛...`, '#3B82F6');
 
-  fetch('http://127.0.0.1:8765/api/collect', {
+  fetch(API_BASE + '/api/collect', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + API_TOKEN
+    },
     body: JSON.stringify({ jobs })
   })
   .then(res => res.json())
   .then(data => {
-    showToast(`🎉 ${data.message}`, '#10B981');
+    showToast(data.message ? `🎉 ${data.message}` : '🎉 提交成功！', '#10B981');
   })
   .catch(err => {
-    showToast('❌ 连接 Agent 接收服务失败，请先在终端运行 npm run dev！', '#EF4444');
+    showToast('❌ 提交失败：请确认服务已启动且书签合有有效令牌！', '#EF4444');
   });
 })();

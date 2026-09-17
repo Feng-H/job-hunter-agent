@@ -117,11 +117,13 @@ chmod +x job-hunter.sh
 
 ---
 
-## 🔒 隐私与开源安全规范
+## 🔒 隐私、认证与部署
 
-- 本项目的 `.gitignore` 已配置严格的数据隔离策略：
-  * **自动忽略**：用户的真实履历（`master_profile.json`）、偏好设置（`rules.json`）、生成简历快照（`data/resumes_tailored/`）、历史聊天记忆（`data/memory/`）、本地日志（`logs/`）以及所有敏感的 `*.pdf` 文件；
-  * 代码库中仅保留 `*.example.json` 作为标准演示模板，有效杜绝隐私泄露风险。
+- **🔐 登录与账号管理（内置）**：首次访问自动引导创建管理员账号（scrypt 加盐哈希）；全部页面与 API 均需登录；书签采集凭专属 Bearer 令牌提交（可随时重置）；连续 5 次失败登录锁定 15 分钟。
+- `.gitignore` 已配置严格的数据隔离：
+  * **自动忽略**：真实履历（`master_profile.json`）、偏好设置（`rules.json`）、生成简历快照、历史聊天记忆、本地日志、账号与会话数据（`data/auth/`）及所有敏感 `*.pdf`；
+  * 代码库中仅保留 `*.example.json` 演示模板。
+- **关于 Vercel 等云平台部署**：当前为“本地优先”架构（依赖本地文件系统与 Chrome），不建议直接导入；云端化差距分析与路线图见 👉 **[docs/DEPLOY.md](./docs/DEPLOY.md)**。
 
 ---
 

@@ -38,3 +38,6 @@ Thumbs.db
 # Archify 视觉验证截图与过程产物（仅保留最终 HTML 与规格 JSON）
 docs/architecture/*.visual-check.*
 docs/architecture/*.png
+
+# 账号与会话数据（密码哈希、会话令牌，绝对禁止提交）
+data/auth/

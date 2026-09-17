@@ -12,6 +12,11 @@
     .btn-bookmark:hover { background: #1D4ED8; }
     .step { background: #F9FAFB; border-left: 4px solid #2563EB; padding: 14px 18px; margin: 12px 0; border-radius: 0 8px 8px 0; }
     .code-box { background: #1E293B; color: #E2E8F0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto; word-break: break-all; margin-top: 10px; }
+    .token-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .token-label { font-size: 13px; font-weight: 600; color: #374151; }
+    .token-val { font-family: monospace; font-size: 12px; background: #EEF2FF; border: 1px solid #C7D2FE; color: #4338CA; padding: 4px 10px; border-radius: 6px; }
+    .btn-sm { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff; color: #374151; cursor: pointer; font-weight: 600; }
+    .btn-sm:hover { background: #F9FAFB; }
   </style>
 </head>
 <body>
@@ -20,21 +25,74 @@
     <p>通过这个工具，你在自己日常的 Chrome 里正常搜索职位，<b>点一下书签栏</b>，职位瞬间送达 Agent 并自动完成：<br>
     <b>3个月时效审查 ➔ 周末严格双休排查 ➔ 严苛通勤规划 ➔ 针对性简历与话术裁剪 ➔ 推送飞书！</b></p>
 
+    <div class="token-row">
+      <span class="token-label">🔑 本账号采集令牌（已自动嵌入书签）：</span>
+      <span class="token-val" id="token-display">加载中...</span>
+      <button class="btn-sm" onclick="regenerateToken()">🔄 重置令牌</button>
+      <button class="btn-sm" onclick="copyToken()">📋 复制</button>
+    </div>
+
     <h3>👉 快速安装（只需 3 秒）：</h3>
     <div class="step">
       <b>方法 1（最简单）：</b> 把下面这个蓝色按钮，直接<b>用鼠标拖拽到你 Chrome 浏览器的【书签栏】</b>：<br>
-      <a class="btn-bookmark" href="javascript:(function(){const s=document.createElement('script');s.src='http://127.0.0.1:8765/bookmarklet.js?t='+Date.now();document.body.appendChild(s);})();">📌 投递到 Job-Hunter</a>
+      <a class="btn-bookmark" id="bookmark-btn" href="#">📌 投递到 Job-Hunter</a>
     </div>
 
     <div class="step">
       <b>方法 2（手动添加）：</b> 在 Chrome 书签栏右键 ➔「添加网页」➔ 名称输入 <code>📌 投递到 Job-Hunter</code> ➔ 网址粘贴下面这行：
-      <div class="code-box">javascript:(function(){const s=document.createElement('script');s.src='http://127.0.0.1:8765/bookmarklet.js?t='+Date.now();document.body.appendChild(s);})();</div>
+      <div class="code-box" id="bookmark-code">加载中...</div>
     </div>
 
     <h3>💡 使用方法：</h3>
-    <p>1. 在平时正常的 Chrome 里打开 <b>Boss直聘 / 猎聘 / 智联</b>，搜索如「智能制造 数字化」或「AI产品经理」；<br>
+    <p>1. 在平时正常的 Chrome 里打开 <b>Boss直聘 / 猎聘 / 智联</b>，搜索如「AI产品经理」或「数字化专家」；<br>
     2. 看到搜索出来的岗位列表时，在书签栏点一下 <b>📌 投递到 Job-Hunter</b>；<br>
     3. 网页右上角会弹出采集成功提示，打开你的<b>手机飞书</b>即可收到精心筛选的推荐卡片！</p>
+
+    <p style="font-size:13px;color:#6B7280;">🔒 安全说明：书签通过本账号专属令牌授权提交；任何人拿到或泄露令牌，都可在此页一键重置使其立即失效。</p>
   </div>
+
+  <script>
+    let collectorToken = '';
+
+    function buildBookmarklet() {
+      const base = location.origin;
+      const url = `javascript:(function(){const s=document.createElement('script');s.src='${base}/bookmarklet.js?token=${collectorToken}&t='+Date.now();document.body.appendChild(s);})();`;
+      document.getElementById('bookmark-btn').href = url;
+      document.getElementById('bookmark-code').innerText = url;
+      document.getElementById('token-display').innerText = collectorToken;
+    }
+
+    async function loadToken() {
+      try {
+        const res = await fetch('/auth/collector-token');
+        const data = await res.json();
+        if (data.code === 0 && data.collectorToken) {
+          collectorToken = data.collectorToken;
+          buildBookmarklet();
+          return;
+        }
+      } catch (e) {}
+      document.getElementById('token-display').innerText = '令牌加载失败，请重新登录';
+    }
+
+    async function regenerateToken() {
+      if (!confirm('重置后旧令牌立即失效，已安装的书签将无法提交，需要重新拖拽安装。确定重置？')) return;
+      const res = await fetch('/auth/collector-token/regenerate', { method: 'POST' });
+      const data = await res.json();
+      if (data.code === 0) {
+        collectorToken = data.collectorToken;
+        buildBookmarklet();
+        alert('✅ 令牌已重置，请重新拖拽安装书签！');
+      } else {
+        alert('重置失败: ' + data.message);
+      }
+    }
+
+    function copyToken() {
+      navigator.clipboard.writeText(collectorToken).then(() => alert('已复制令牌'));
+    }
+
+    window.addEventListener('DOMContentLoaded', loadToken);
+  </script>
 </body>
 </html>

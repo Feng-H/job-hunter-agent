@@ -8,6 +8,9 @@ import { StandaloneJobHunter } from '../../standalone.js';
 import { AntiRiskEngine } from '../safety/AntiRiskEngine.js';
 import { PiSessionCopilot } from '../ai/PiSessionCopilot.js';
 import { OnboardingService } from '../onboarding/OnboardingService.js';
+import { AuthService } from '../auth/AuthService.js';
+
+const SESSION_COOKIE = 'jobhunter_session';
 
 export class CollectorServer {
   private server: http.Server | null = null;
@@ -15,21 +18,33 @@ export class CollectorServer {
   private port: number;
   private llmClient: LlmClient;
   private onboardingService: OnboardingService;
+  private auth: AuthService;
 
   constructor(agent: JobHunterCore, port: number = 8765) {
     this.agent = agent;
     this.port = port;
     this.llmClient = new LlmClient();
     this.onboardingService = new OnboardingService();
+    this.auth = new AuthService();
+  }
+
+  private parseSessionCookie(req: http.IncomingMessage): string | undefined {
+    const raw = req.headers.cookie || '';
+    const match = raw.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
+    return match ? decodeURIComponent(match[1]) : undefined;
+  }
+
+  private getClientIp(req: http.IncomingMessage): string {
+    return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
   }
 
   public start(): Promise<void> {
     return new Promise((resolve) => {
       this.server = http.createServer(async (req, res) => {
-        // 允许跨域
+        // 允许跨域（书签采集器从招聘站点跨域提交，凭 Bearer 令牌而非 Cookie）
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
         if (req.method === 'OPTIONS') {
           res.writeHead(200);
@@ -39,6 +54,122 @@ export class CollectorServer {
 
         const url = new URL(req.url || '/', `http://127.0.0.1:${this.port}`);
         const pathname = url.pathname;
+
+        // ============ 0. 认证与账号管理 (Auth & Account Management) ============
+        // 0.1 登录页（静态，公开）
+        if (pathname === '/login') {
+          const loginPath = path.resolve(process.cwd(), 'public/login.html');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(fs.readFileSync(loginPath));
+          return;
+        }
+
+        // 0.2 认证 API（公开）
+        if (pathname.startsWith('/auth/')) {
+          let authBody = '';
+          req.on('data', c => authBody += c);
+          req.on('end', async () => {
+            const sendJson = (code: number, payload: any, cookie?: string) => {
+              const headers: any = { 'Content-Type': 'application/json' };
+              if (cookie) headers['Set-Cookie'] = cookie;
+              res.writeHead(code, headers);
+              res.end(JSON.stringify(payload));
+            };
+            try {
+              const data = authBody ? JSON.parse(authBody) : {};
+              const ip = this.getClientIp(req);
+
+              if (req.method === 'GET' && pathname === '/auth/status') {
+                const setupMode = this.auth.isSetupMode();
+                const username = this.auth.validateSession(this.parseSessionCookie(req));
+                return sendJson(200, { code: 0, setupMode, loggedIn: Boolean(username), username: username || null });
+              }
+
+              if (req.method === 'POST' && pathname === '/auth/setup') {
+                const result = this.auth.createAccount(data.username, data.password);
+                const cookie = result.sessionToken
+                  ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
+                  : undefined;
+                return sendJson(result.ok ? 200 : 400, { code: result.ok ? 0 : -1, message: result.message }, cookie);
+              }
+
+              if (req.method === 'POST' && pathname === '/auth/login') {
+                const result = this.auth.login(data.username, data.password, ip);
+                const cookie = result.sessionToken
+                  ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
+                  : undefined;
+                return sendJson(result.ok ? 200 : 401, { code: result.ok ? 0 : -1, message: result.message }, cookie);
+              }
+
+              if (req.method === 'POST' && pathname === '/auth/logout') {
+                this.auth.logout(this.parseSessionCookie(req));
+                const cookie = `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`;
+                return sendJson(200, { code: 0, message: '已安全退出登录' }, cookie);
+              }
+
+              // ---- 以下认证接口需要已登录会话 ----
+              const sessionUser = this.auth.validateSession(this.parseSessionCookie(req));
+              if (!sessionUser) {
+                return sendJson(401, { code: -1, message: '请先登录' });
+              }
+
+              if (req.method === 'POST' && pathname === '/auth/change-password') {
+                const result = this.auth.changePassword(sessionUser, data.oldPassword, data.newPassword);
+                const cookie = result.sessionToken
+                  ? `${SESSION_COOKIE}=${encodeURIComponent(result.sessionToken)}; HttpOnly; Path=/; Max-Age=${7 * 24 * 3600}; SameSite=Lax`
+                  : undefined;
+                return sendJson(result.ok ? 200 : 400, { code: result.ok ? 0 : -1, message: result.message }, cookie);
+              }
+
+              if (req.method === 'GET' && pathname === '/auth/collector-token') {
+                return sendJson(200, {
+                  code: 0,
+                  username: sessionUser,
+                  collectorToken: this.auth.getCollectorToken(sessionUser)
+                });
+              }
+
+              if (req.method === 'POST' && pathname === '/auth/collector-token/regenerate') {
+                const result = this.auth.regenerateCollectorToken(sessionUser);
+                return sendJson(result.ok ? 200 : 400, {
+                  code: result.ok ? 0 : -1,
+                  message: result.message,
+                  collectorToken: this.auth.getCollectorToken(sessionUser)
+                });
+              }
+
+              return sendJson(404, { code: -1, message: '未知的认证接口' });
+            } catch (e: any) {
+              return sendJson(500, { code: -1, message: e.message });
+            }
+          });
+          return;
+        }
+
+        // 0.3 采集器 JS 为公开静态资源（不含任何机密，令牌由书签 URL 携带）
+        if (pathname === '/bookmarklet.js') {
+          const jsPath = path.resolve(process.cwd(), 'scripts/bookmarklet.js');
+          res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+          res.end(fs.readFileSync(jsPath));
+          return;
+        }
+
+        // 0.4 统一访问控制门：会话 Cookie 或 Bearer 采集令牌
+        const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+        const sessionUser = this.auth.validateSession(this.parseSessionCookie(req));
+        const tokenUser = this.auth.verifyCollectorToken(bearer || url.searchParams.get('token') || undefined);
+        const authenticatedUser = sessionUser || tokenUser;
+
+        if (!authenticatedUser) {
+          if (pathname.startsWith('/api/')) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ code: -1, message: '未授权：请先登录或携带有效采集令牌' }));
+          } else {
+            res.writeHead(302, { Location: '/login' });
+            res.end();
+          }
+          return;
+        }
 
         // 1. 静态主页：Web 看板
         if (pathname === '/' || pathname === '/index.html') {
@@ -61,14 +192,6 @@ export class CollectorServer {
           const obPath = path.resolve(process.cwd(), 'public/onboarding.html');
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(fs.readFileSync(obPath));
-          return;
-        }
-
-        // 3. 动态 JS
-        if (pathname === '/bookmarklet.js') {
-          const jsPath = path.resolve(process.cwd(), 'scripts/bookmarklet.js');
-          res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
-          res.end(fs.readFileSync(jsPath));
           return;
         }
 
