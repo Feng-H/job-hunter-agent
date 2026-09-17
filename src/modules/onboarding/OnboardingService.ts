@@ -146,8 +146,9 @@ export class OnboardingService {
 
   /**
    * 从用户上传的简历文件中提取纯文本（支持 PDF/TXT/MD/JSON）
+   * PDF 双通道：本地优先 pdftotext 二进制（排版还原最佳），云端/未安装时降级 unpdf 纯 JS 提取
    */
-  public extractTextFromFile(buffer: Buffer, fileName: string): string {
+  public async extractTextFromFile(buffer: Buffer, fileName: string): Promise<string> {
     const ext = path.extname(fileName).toLowerCase();
 
     if (ext === '.txt' || ext === '.md' || ext === '.json') {
@@ -155,19 +156,31 @@ export class OnboardingService {
     }
 
     if (ext === '.pdf') {
-      // 写入系统临时目录（兼容 Vercel Serverless /tmp）
+      // 通道 1：系统 pdftotext（本地模式，还原质量最佳）
       const tempPath = path.join(os.tmpdir(), `temp_resume_${Date.now()}.pdf`);
       try {
         fs.writeFileSync(tempPath, buffer);
         const text = execSync(`pdftotext "${tempPath}" -`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
-        return text;
+        if (text && text.trim()) return text;
+        console.warn('pdftotext 提取到空文本（疑似扫描版），尝试纯 JS 通道');
       } catch (e: any) {
-        console.warn('pdftotext 解析 PDF 失败，尝试降级:', e.message);
-        throw new Error('PDF 文本提取失败。若为扫描版图片 PDF 或系统未安装 pdftotext，请直接将简历文本复制粘贴到输入框中。');
+        console.warn('pdftotext 不可用（云端正常现象），切换纯 JS 提取通道:', e.message?.slice(0, 60));
       } finally {
         if (fs.existsSync(tempPath)) {
           try { fs.unlinkSync(tempPath); } catch (e) {}
         }
+      }
+
+      // 通道 2：unpdf 纯 JS 提取（pdf.js 内核，无系统依赖，Serverless 可用，支持中文 ToUnicode）
+      try {
+        const { extractText, getDocumentProxy } = await import('unpdf');
+        const pdf = await getDocumentProxy(new Uint8Array(buffer));
+        const { text } = await extractText(pdf, { mergePages: true });
+        if (text && String(text).trim()) return String(text);
+        throw new Error('提取到空文本');
+      } catch (e: any) {
+        console.warn('unpdf 提取失败:', e.message?.slice(0, 80));
+        throw new Error('PDF 文本提取失败：该文件可能是扫描版图片 PDF（纯图片无文字层）。请直接将简历文本复制粘贴到输入框中。');
       }
     }
 

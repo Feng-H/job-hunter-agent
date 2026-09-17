@@ -578,7 +578,7 @@ export class CollectorServer {
               return sendJson(400, { code: -1, error: '缺少文件数据' });
             }
             const buffer = Buffer.from(fileBase64, 'base64');
-            const text = this.onboardingService.extractTextFromFile(buffer, fileName);
+            const text = await this.onboardingService.extractTextFromFile(buffer, fileName);
             return sendJson(200, { code: 0, text });
           }
 
