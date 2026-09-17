@@ -8,7 +8,7 @@
     "scan": "tsx scripts/scan-mac.ts",
     "dev": "tsx src/server.ts",
     "server": "tsx src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/build-api.mjs",
     "start": "node dist/server.js"
   },
   "keywords": [
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/dotenv": "^6.1.1",
     "@types/node": "^22.20.3",
+    "esbuild": "^0.25.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   },
