@@ -120,6 +120,7 @@ cp .env.example .env        # 填入 LLM/飞书配置
 | 静态页 404 | 确认 `vercel.json` 未被改动（依赖 `cleanUrls` 与 `/api` 重写） |
 | FUNCTION_INVOCATION_FAILED / Invalid export | 确认 `package.json` **没有** `start` 脚本；确认 `api/[...path].js` 已提交且为最新构建（改过服务端代码必须重跑 `npm run build` 再 push） |
 | KV 环境变量带前缀（如 `a_KV_REST_API_URL`）| 正常现象，存储层自动扫描任意前缀的变量对；也可登录后访问 `/api/diag/storage` 验证 KV 读写探测 |
+| 重新部署后要求重新注册账号 | 几乎一定是**连接了多个 KV 数据库**（多组 `*_KV_REST_API_*` 变量并存）——不同部署可能选中不同的库，表现为"账号消失"。系统现已固定选择字母序第一的变量对；建议在 Vercel → Storage 中只保留一个库并 Redeploy。注册接口已带回读校验，写入失败会明确报错而非假成功 |
 
 ---
 
