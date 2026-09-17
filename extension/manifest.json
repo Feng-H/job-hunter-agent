@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Job-Hunter 智能求职采集助手",
+  "version": "1.0.0",
+  "description": "零风控职位智能提取插件，支持 Boss直聘、猎聘、智联等一键同步至私有 Job-Hunter 看板",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Job-Hunter 采集助手"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.zhipin.com/*",
+        "*://*.liepin.com/*",
+        "*://*.zhaopin.com/*",
+        "*://*.51job.com/*",
+        "*://*.lagou.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

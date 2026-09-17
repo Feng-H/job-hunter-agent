@@ -11,10 +11,13 @@ data/preferences/llm_config.json
 # 个人敏感信息与真实履历（仅保留 *.example.json 模板在代码库中）
 data/profile/master_profile.json
 data/preferences/rules.json
+data/preferences/feishu.json
+data/system_status.json
 data/db/*.json
 data/memory/*.json
 data/memory/copilot_sessions/
 data/resumes_tailored/
+data/test_*.json
 *.pdf
 *简历*
 

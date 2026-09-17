@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { JobPost, MasterProfile, FilterResult, TailoredResume } from '../../types/index.js';
+import { readJson, writeJson } from '../../storage/index.js';
 
 export interface LlmConfig {
   provider: string;
@@ -11,45 +12,83 @@ export interface LlmConfig {
 }
 
 export class LlmClient {
-  private configPath: string;
+  private configKey: string;
   private config: LlmConfig;
+  private ready: Promise<void>;
 
-  constructor(configPath: string = path.resolve(process.cwd(), 'data/preferences/llm_config.json')) {
-    this.configPath = configPath;
-    this.config = this.loadConfig();
+  constructor(configKey: string = 'data/preferences/llm_config.json') {
+    this.configKey = configKey;
+    this.config = {
+      provider: 'openai_compatible',
+      apiKey: process.env.LLM_API_KEY || '',
+      baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com/v1',
+      model: process.env.LLM_MODEL || 'deepseek-chat',
+      temperature: 0.3
+    };
+    this.ready = this.loadConfig();
+  }
+
+  public async ensureReady(): Promise<void> {
+    await this.ready;
   }
 
   public getConfig(): LlmConfig {
     return { ...this.config };
   }
 
-  public saveConfig(newConfig: Partial<LlmConfig>): void {
+  /**
+   * 获取脱敏后的安全配置（安全展示给管理员页面，敏感密钥打码）
+   */
+  public getMaskedConfig(): Omit<LlmConfig, 'apiKey'> & { apiKey: string; hasKey: boolean } {
+    const rawKey = this.config.apiKey || '';
+    let maskedKey = '';
+    if (rawKey.length > 8) {
+      maskedKey = `${rawKey.slice(0, 4)}••••${rawKey.slice(-4)}`;
+    } else if (rawKey.length > 0) {
+      maskedKey = '••••••••';
+    }
+    return {
+      provider: this.config.provider,
+      baseUrl: this.config.baseUrl,
+      model: this.config.model,
+      temperature: this.config.temperature,
+      apiKey: maskedKey,
+      hasKey: Boolean(rawKey)
+    };
+  }
+
+  public async saveConfig(newConfig: Partial<LlmConfig>): Promise<void> {
+    // 若前端传入的是脱敏的掩码字符且已有原 Key，则不覆盖实际密钥
+    if (newConfig.apiKey && newConfig.apiKey.includes('••••') && this.config.apiKey) {
+      delete newConfig.apiKey;
+    }
     this.config = { ...this.config, ...newConfig };
-    fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf-8');
+    await writeJson(this.configKey, this.config);
   }
 
   /**
    * 测试大模型 API 连通性
    */
-  public async testConnection(): Promise<{ success: boolean; message: string }> {
-    if (!this.config.apiKey) {
+  public async testConnection(overrideConfig?: Partial<LlmConfig>): Promise<{ success: boolean; message: string }> {
+    const cfg = { ...this.config, ...(overrideConfig || {}) };
+    if (!cfg.apiKey) {
       return { success: false, message: 'API Key 为空，请先配置 API Key' };
     }
 
     try {
-      const url = `${this.config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+      const url = `${cfg.baseUrl.replace(/\/+$/, '')}/chat/completions`;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
+      const timer = setTimeout(() => controller.abort(), 12000);
 
       const resp = await fetch(url, {
         method: 'POST',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`
+          'Authorization': `Bearer ${cfg.apiKey}`
         },
         body: JSON.stringify({
-          model: this.config.model,
+          model: cfg.model,
           messages: [{ role: 'user', content: 'Say "OK" if you can hear me.' }],
           max_tokens: 10
         })
@@ -67,6 +106,13 @@ export class LlmClient {
     } catch (e: any) {
       return { success: false, message: `请求失败: ${e.message}` };
     }
+  }
+
+  /**
+   * 标准调用接口
+   */
+  public async complete(userPrompt: string, systemPrompt: string = 'You are a helpful assistant.'): Promise<string> {
+    return this.callChatCompletions(systemPrompt, userPrompt, 1500);
   }
 
   /**
@@ -178,21 +224,13 @@ ${userTweakInstructions ? `【用户的额外微调指令】：${userTweakInstru
 {
   ...更新后完整的 MasterProfile JSON 对象...
 }
-\`\`\`
-若本次对话只是日常探讨或确认信息尚未形成结构化履历，则无需输出该代码块。`;
+\`\`\``;
 
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...chatHistory.slice(-6),
+      ...chatHistory.slice(-8).map(m => ({ role: m.role, content: m.content })),
       { role: 'user', content: userMessage }
     ];
-
-    if (!this.config.apiKey) {
-      // 降级兜底模拟对话
-      return {
-        reply: `（未检测到大模型 API Key，已启动本地规则引导）\n收到！您补充的内容：「${userMessage}」非常具有含金量。建议您在【模型与系统设置】页面填入任意大模型 API Key（如 DeepSeek 或 Claude），我将立刻为您全自动将其结构化加工并实时注入到左侧全量档案库中！`
-      };
-    }
 
     try {
       const url = `${this.config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
@@ -228,8 +266,7 @@ ${userTweakInstructions ? `【用户的额外微调指令】：${userTweakInstru
           updatedProfile = JSON.parse(updateMatch[1]);
           cleanReply = fullReply.replace(/```profile_update[\s\S]*?```/, '').trim();
           // 保存更新
-          const profPath = path.resolve(process.cwd(), 'data/profile/master_profile.json');
-          fs.writeFileSync(profPath, JSON.stringify(updatedProfile, null, 2), 'utf-8');
+          await writeJson('data/profile/master_profile.json', updatedProfile);
         } catch (jsonErr) {
           console.warn('解析履历更新 JSON 异常:', jsonErr);
         }
@@ -241,7 +278,7 @@ ${userTweakInstructions ? `【用户的额外微调指令】：${userTweakInstru
     }
   }
 
-  private async callChatCompletions(systemPrompt: string, userPrompt: string, maxTokens: number = 1500): Promise<string> {
+  public async callChatCompletions(systemPrompt: string, userPrompt: string, maxTokens: number = 1500): Promise<string> {
     const url = `${this.config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 35000);
@@ -273,18 +310,14 @@ ${userTweakInstructions ? `【用户的额外微调指令】：${userTweakInstru
     return data?.choices?.[0]?.message?.content || '';
   }
 
-  private loadConfig(): LlmConfig {
-    try {
-      if (fs.existsSync(this.configPath)) {
-        return JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
-      }
-    } catch (e) {}
-    return {
+  private async loadConfig(): Promise<void> {
+    const loaded = await readJson<LlmConfig>(this.configKey, {
       provider: 'openai_compatible',
-      apiKey: '',
-      baseUrl: 'https://api.deepseek.com/v1',
-      model: 'deepseek-chat',
+      apiKey: process.env.LLM_API_KEY || '',
+      baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com/v1',
+      model: process.env.LLM_MODEL || 'deepseek-chat',
       temperature: 0.3
-    };
+    });
+    this.config = loaded;
   }
 }

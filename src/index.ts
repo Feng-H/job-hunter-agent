@@ -27,17 +27,23 @@ export class JobHunterCore {
     this.feishu = new FeishuNotifier();
 
     const profileDir = path.resolve(process.cwd(), 'data/profile');
-    if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
+    try {
+      if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
+      const profilePath = path.resolve(profileDir, 'master_profile.json');
+      const exampleProfilePath = path.resolve(profileDir, 'master_profile.example.json');
+
+      if (!fs.existsSync(profilePath) && fs.existsSync(exampleProfilePath)) {
+        fs.copyFileSync(exampleProfilePath, profilePath);
+      }
+    } catch {}
 
     const profilePath = path.resolve(profileDir, 'master_profile.json');
-    const exampleProfilePath = path.resolve(profileDir, 'master_profile.example.json');
-
-    if (!fs.existsSync(profilePath) && fs.existsSync(exampleProfilePath)) {
-      fs.copyFileSync(exampleProfilePath, profilePath);
-    }
-
     if (fs.existsSync(profilePath)) {
-      this.profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
+      try {
+        this.profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
+      } catch {
+        this.profile = { basicInfo: { name: '求职者', title: '专业人才', yearsOfExperience: 5 } } as any;
+      }
     } else {
       this.profile = { basicInfo: { name: '求职者', title: '专业人才', yearsOfExperience: 5 } } as any;
     }

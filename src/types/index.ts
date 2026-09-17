@@ -73,7 +73,7 @@ export type PlatformType =
 export interface JobPost {
   id: string;                      // 唯一ID（URL或平台ID哈希）
   title: string;                   // 职位名
-  company: string;                 // 公司名
+  company: string;                 // 公司名（猎头帖时可能为猎头方或代称）
   city: string;                    // 城市
   workMode: WorkMode;              // 远程/线下/混合
   salaryText: string;              // 薪资文本描述（如 25-35K·14薪）
@@ -86,6 +86,18 @@ export interface JobPost {
   hrName?: string;
   hrTitle?: string;
   discoveredAt: string;            // ISO 时间
+  sourceType?: 'HEADHUNTER' | 'COMPANY_DIRECT';  // 猎头代发 / 企业官方直发
+  detailCaptured?: boolean;        // 是否已从详情页抓取全量 JD
+}
+
+/** 猎头帖真实企业解析结果 */
+export interface CompanyResolution {
+  actualCompany: string | null;                 // 解析出的真实招聘企业
+  method: 'official_match' | 'ai_inference' | 'as_is';
+  confidence: number;                           // 0-100
+  explanation: string;
+  matchedOfficialJobId?: string;                // 匹配到的官方直发职位 ID
+  resolvedAt: string;
 }
 
 export interface FilterResult {
@@ -122,6 +134,7 @@ export interface TrackedJobRecord {
   }>;
   filterResult?: FilterResult;
   tailoredResume?: TailoredResume;
+  companyResolution?: CompanyResolution;  // 猎头帖真实企业解析结果
   userFeedback?: {
     action: 'APPROVED' | 'REJECTED' | 'REQUEST_TWEAK';
     reason?: string;

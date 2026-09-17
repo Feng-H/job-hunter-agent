@@ -1,14 +1,25 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { FeedbackMemory } from '../../types/index.js';
+import { readJson, writeJson } from '../../storage/index.js';
 
 export class FeedbackMemoryManager {
-  private filePath: string;
+  private fileKey: string;
   private memory: FeedbackMemory;
+  private ready: Promise<void>;
 
-  constructor(filePath: string = path.resolve(process.cwd(), 'data/memory/feedback.json')) {
-    this.filePath = filePath;
-    this.memory = this.load();
+  constructor(fileKey: string = 'data/memory/feedback.json') {
+    this.fileKey = fileKey;
+    this.memory = {
+      rejectedJobIds: [],
+      negativeKeywords: [],
+      negativeCompanyKeywords: [],
+      resumeTweaks: [],
+      historyFeedback: []
+    };
+    this.ready = this.load();
+  }
+
+  public async ensureReady(): Promise<void> {
+    await this.ready;
   }
 
   public recordRejection(jobId: string, company: string, jobTitle: string, reason?: string): void {
@@ -54,30 +65,19 @@ export class FeedbackMemoryManager {
     return this.memory;
   }
 
-  private load(): FeedbackMemory {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        return JSON.parse(fs.readFileSync(this.filePath, 'utf-8'));
-      }
-    } catch (e) {
-      console.error('[FeedbackMemoryManager] 读取失败:', e);
-    }
-    return {
+  private async load(): Promise<void> {
+    this.memory = await readJson<FeedbackMemory>(this.fileKey, {
       rejectedJobIds: [],
       negativeKeywords: [],
       negativeCompanyKeywords: [],
       resumeTweaks: [],
       historyFeedback: []
-    };
+    });
   }
 
-  private save(): void {
+  private async save(): Promise<void> {
     try {
-      const dir = path.dirname(this.filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(this.filePath, JSON.stringify(this.memory, null, 2), 'utf-8');
+      await writeJson(this.fileKey, this.memory);
     } catch (e) {
       console.error('[FeedbackMemoryManager] 保存失败:', e);
     }

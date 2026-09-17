@@ -1,52 +1,116 @@
-# 🚢 部署指南：为什么不能直接导入 Vercel，以及云端化路线图
+# 🚢 部署指南：Vercel 一键上云
 
-> 收到 Vercel「Import & Deploy」邀请邮件很正常（GitHub 公开仓库都会触发）。但请先读完本文：**当前版本是"本地优先"的个人 Agent 系统，直接部署到 Vercel 既不安全，也跑不起来。**
+> 本项目已完成 Serverless 化改造，**可直接部署到 Vercel**。部署后自动获得双模式形态：访客看到 Demo 演示页，管理员登录后进入真实工作台。
 
 ---
 
-## 一、现状架构 vs 云端部署的核心差距
+## 一、部署架构总览
 
-| 维度 | 当前实现（本地优先） | Vercel Serverless 环境 | 差距结论 |
-|---|---|---|---|
-| **认证与账号** | ✅ 已实现（本次更新）：登录/管理员初始化/改密/会话/采集令牌 | 需要持久化会话存储 | 会话存 JSON 文件，重启/多实例会丢，需迁 KV/DB |
-| **数据持久化** | 本地 JSON 文件（`data/**/*.json`） | 函数文件系统**只读且临时**，每次调用可能重置 | ❌ 必须迁移到 Vercel Postgres / Upstash Redis / Turso |
-| **PDF 简历解析** | 调用系统二进制 `pdftotext` | 无系统二进制 | ❌ 改为前端解析（pdf.js）或直接让 LLM 处理文本粘贴 |
-| **Chrome 被动扫描 / JXA** | 依赖本机 Chrome 与 AppleScript | 云端无浏览器宿主 | ❌ 该能力仅限本地；云端只保留书签采集入口 |
-| **Pi Agent 会话** | `SessionManager` 落盘 `.jsonl` | 同上不可写 | ❌ 需自实现 DB-backed SessionManager 或降级为无状态 LLM 调用 |
-| **长耗时 LLM 调用** | 无超时限制（简历裁剪可达 30s+） | Hobby 默认 10s，最大可配 60~300s | ⚠️ 需 `maxDuration` 配置 + 流式/异步任务队列 |
-| **书签采集入口** | `http://127.0.0.1:8765` | 可改为公网域名 | ✅ 本质可行（书签已支持自动识别部署域名 + Bearer 令牌） |
-| **飞书 Webhook 推送** | 出站 HTTPS | 出站 HTTPS | ✅ 无障碍 |
-| **安全边界** | localhost 天然隔离 + 已加登录 | 公网暴露，攻击面扩大 | ⚠️ 必须强制 HTTPS、限流、密钥走环境变量 |
+```text
+浏览器访客 ──► Vercel Edge
+                ├─ 静态页面（public/ · cleanUrls CDN 分发）
+                │    /  /demo        → index.html（双模式看板）
+                │    /login          → 登录/初始化
+                │    /setup /onboarding
+                └─ Serverless 函数（api/index.ts）
+                     /api/*  /auth/*  /healthz → CollectorServer.handle()
+                     ├─ 认证门：Demo 沙箱 ⇆ Admin 真实管道
+                     ├─ 存储：Vercel KV (Upstash REST)
+                     └─ 出站：私有 LLM / 飞书 Webhook
+```
 
-## 二、本次已完成的"上云前置优化"（Phase 1 ✅）
+**云端能力矩阵**：
 
-即使暂时只跑在本地，这些也是公网部署的**硬性前置条件**，现已全部落地：
+| 能力 | 云端状态 | 说明 |
+|---|---|---|
+| Demo 演示页 / Admin 看板 | ✅ 完整 | 双模式隔离，密钥零泄露 |
+| Chrome 扩展采集 | ✅ 完整 | 扩展配置 Vercel 域名即可，自动同步 + 指纹去重 |
+| 官网直投雷达 | ✅ 完整 | 预置库免费；动态城市检索消耗管理员 LLM |
+| 猎头帖溯源 | ✅ 完整 | 指纹匹配免费自动；AI 深度解析按需手动触发 |
+| Onboarding 向导 / 档案 / 规则 | ✅ 完整 | 经统一存储层持久化到 KV |
+| 飞书推送 | ✅ 完整 | 出站 HTTPS 无障碍 |
+| PDF 简历解构 | ⚠️ 降级 | 云端无 `pdftotext` 二进制，请直接粘贴简历文本 |
+| Mac 本地 JXA / CDP 扫描 | ❌ 仅本地 | 依赖本机 Chrome/AppleScript；云端由扩展采集替代 |
+| Pi 原生会话树 | ⚠️ 降级 | 云端自动切换 LlmClient 轻量对话，功能等价 |
 
-1. **🔐 登录与会话**
-   - 首次访问 `/login` 引导创建管理员账号（仅一次）；
-   - 密码 `scrypt` 加盐哈希存储，绝不存明文；
-   - 会话令牌（随机 256bit）以 `HttpOnly + SameSite=Lax` Cookie 下发，有效期 7 天，服务端只存 SHA-256 哈希；
-   - 连续 5 次失败登录按「用户名+IP」锁定 15 分钟。
-2. **👤 账号管理**
-   - 看板设置页新增「账号与安全管理」：在线修改密码（改密自动吊销其他会话）、安全退出登录；
-   - 全部 `/api/*` 与页面统一过认证门：未登录 API 返回 401、页面 302 跳登录页。
-3. **🔖 书签采集令牌（Bearer Token）**
-   - 每账号一个专属采集令牌，书签 URL 自动携带，跨域提交走 `Authorization: Bearer`（不依赖 Cookie）；
-   - 令牌可随时在看板/书签页一键重置，旧令牌立即失效；
-   - 书签脚本自动识别部署域名——**未来部署到云端后，同一书签无需改动即可指向云端**。
+---
 
-## 三、云端化路线图（按需推进）
+## 二、部署步骤（约 5 分钟）
 
-- **Phase 2 · 数据层抽象**：把 `data/*.json` 的读写抽成 `StorageAdapter` 接口（LocalFS / Postgres / Redis 双实现），Pi 会话与管道库全部迁入 DB。
-- **Phase 3 · Serverless 适配**：把 `CollectorServer` 拆为 Vercel Functions（`api/*.ts`），`vercel.json` 配置 `maxDuration`，LLM 长任务改队列异步 + 飞书回执。
-- **Phase 4 · 多租户 SaaS**：注册开放、每用户数据隔离、订阅计费——这是另一个产品形态，建议先验证个人云部署需求再做。
+### 1. 推送代码
 
-## 四、推荐做法
+```bash
+git add -A
+git commit -m "feat: Vercel-ready"
+git push origin main
+```
 
-| 场景 | 建议 |
+> `.gitignore` 已物理隔离所有敏感数据（真实履历、API Key、飞书密钥、账号库），推送前可 `git status` 复核。
+
+### 2. Vercel 导入项目
+
+1. 打开 [vercel.com](https://vercel.com/) → **Add New… → Project** → 选择本仓库；
+2. Framework Preset 保持 **Other**（`vercel.json` 已配置好路由、构建命令与静态分发，无需任何改动）；
+3. 点击 Deploy。
+
+### 3. 创建 KV 数据库（必做）
+
+> ⚠️ **这不是可选项**：Vercel 函数磁盘只读，没有 KV 则管理员账号与投递数据无法持久化（登录即失效）。
+
+1. 项目页 → **Storage** → **Create Database** → **KV (Upstash)**；
+2. 创建后连接到本项目，Vercel 自动注入 `KV_REST_API_URL` 与 `KV_REST_API_TOKEN` 环境变量；
+3. 存储适配层（`src/storage/index.ts`）检测到这两个变量即自动启用云端读写，无需改代码。
+
+### 4. 配置环境变量
+
+**Settings → Environment Variables** 添加：
+
+| 变量 | 必要性 | 说明 |
+|---|---|---|
+| `LLM_API_KEY` | 必填 | 私有大模型密钥（仅管理员模式可触发） |
+| `LLM_BASE_URL` | 必填 | 如 `https://api.deepseek.com/v1` |
+| `LLM_MODEL` | 必填 | 如 `deepseek-chat` |
+| `FEISHU_WEBHOOK_URL` | 可选 | 飞书审批卡片推送 |
+
+### 5. 部署后自检清单
+
+- [ ] 打开 `https://<域名>.vercel.app` → 应看到 **Demo 演示模式**（琥珀色横幅 + 示例数据 + 管理员登录按钮）；
+- [ ] 打开 `/login` → 首次进入创建管理员账号（scrypt 加盐，仅允许创建一次）；
+- [ ] 登录后进入真实工作台，完成 `/onboarding` 初始化（LLM 配置、简历粘贴、红线设定）；
+- [ ] Chrome 扩展 popup 填入 Vercel 域名 + `/setup` 页复制的采集令牌 → 「测试连通性」应返回健康；
+- [ ] 逛 Boss直聘/猎聘，扩展应自动同步新岗位并在看板出现。
+
+---
+
+## 三、数据初始化说明
+
+云端 KV 从空库起步，**不迁移本地 `data/` 历史数据**（简历 PDF、本地投递记录不上云）。首次使用流程：
+
+1. `/login` 创建管理员账号；
+2. `/onboarding` 粘贴简历文本（云端不支持 PDF 解析）+ 配置 LLM + 对齐红线；
+3. 之后所有采集、状态、配置均持久化在 KV。
+
+如确需迁移本地历史投递记录，可编写一次性脚本将 `data/db/jobs_pipeline.json` 通过 Upstash REST API 推入同名键 `data/db/jobs_pipeline.json`。
+
+---
+
+## 四、本地开发模式
+
+```bash
+npm install
+cp .env.example .env        # 填入 LLM/飞书配置
+./job-hunter.sh start        # 或 npm run dev
+```
+
+本地模式使用文件存储（`data/**/*.json`），支持完整功能（含 Pi 原生会话与 Mac JXA 扫描）。本地与云端通过统一的存储键名保持数据结构一致。
+
+---
+
+## 五、常见问题
+
+| 问题 | 排查 |
 |---|---|
-| **个人使用（推荐）** | 继续本地运行 `./job-hunter.sh start`，局域网/公网访问时已有登录保护；如需手机访问，用 Tailscale/Cloudflare Tunnel 打洞，**不要裸露公网** |
-| **想体验"云端控制台"** | 完成 Phase 2/3 后部署 Vercel：手机任意设备点书签 → 云端初筛裁剪 → 飞书推送 |
-| **收到 Vercel 邀请邮件** | 直接忽略即可，或先 Import 但设为 Private/Preview 防止误公开 |
-
-> ⚠️ 千万不要把含真实履历与 API Key 的本地 `data/` 目录提交到任何仓库——`.gitignore` 已做物理隔离，请保持。
+| 登录后刷新又变回 Demo | KV 未连接：函数磁盘只读，会话写不进去。完成步骤 3 后 Redeploy |
+| 扩展提示无法连接 | popup 中服务地址需完整域名（`https://xxx.vercel.app`，不带末尾斜杠）；检查 `/healthz` |
+| LLM 功能无响应 | 检查环境变量三个 `LLM_*` 是否都已配置并 Redeploy；确认配额未触发每日上限 |
+| 静态页 404 | 确认 `vercel.json` 未被改动（依赖 `cleanUrls` 与 `/api` 重写） |

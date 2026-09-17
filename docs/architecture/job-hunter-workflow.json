@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Job-Hunter OS：Workflow × Agent 协同架构",
+    "title": "Job-Hunter OS：Workflow × Agent 协同架构（云端双模式版）",
     "locale": "zh-CN",
     "animation": "trace",
     "visual_preset": "signal-flow",
@@ -10,10 +10,10 @@
     "views": [
       {
         "id": "full-pipeline",
-        "label": "主干管道：从线索到投递",
+        "label": "主干管道：从采集到投递",
         "focus": [
-          "browser_ext",
-          "passive_ingest",
+          "chrome_ext",
+          "demo_admin_gate",
           "safety_breaker",
           "job_filter",
           "jd_analyzer",
@@ -21,32 +21,42 @@
           "job_tracker",
           "feishu_card"
         ],
-        "note": "岗位线索经工作流初筛，由 Agent 深度裁剪，推送飞书决策。"
+        "note": "扩展自动采集经隔离门与熔断审查，由 Agent 深度裁剪，推送飞书与看板决策。"
       },
       {
         "id": "agent-core",
         "label": "Agent 认知与推理层",
         "focus": [
           "pi_copilot",
-          "copilot_sessions",
-          "profile_store",
           "jd_analyzer",
-          "resume_tailor"
+          "resume_tailor",
+          "company_resolver",
+          "kv_store"
         ],
-        "note": "基于 Pi 核心与大模型的自主推理、事实沉淀与动态剪裁体系。"
+        "note": "JD 洞察、简历动态裁剪、猎头帖企业溯源与履历打磨，全部严格依从主档案事实源。"
       },
       {
         "id": "workflow-safety",
         "label": "Workflow 确定性护盾",
         "focus": [
-          "passive_ingest",
+          "demo_admin_gate",
           "safety_breaker",
           "job_filter",
-          "rules_store",
           "job_tracker",
-          "feishu_card"
+          "kv_store"
         ],
-        "note": "零风控防封、硬性规则过滤与管道状态流转的确定性底座。"
+        "note": "双模式隔离、防风控熔断、硬性规则过滤与 URL 归一指纹防重的确定性底座。"
+      },
+      {
+        "id": "zero-risk-channels",
+        "label": "零风控双通道采集",
+        "focus": [
+          "chrome_ext",
+          "career_radar",
+          "company_resolver",
+          "safety_breaker"
+        ],
+        "note": "真人浏览扩展采集 + 官网/公开 ATS 直投双通道，全程不经平台脚本探测。"
       }
     ],
     "output": "docs/architecture/job-hunter-os.html",
@@ -74,8 +84,8 @@
     }
   ],
   "mainPath": [
-    "browser_ext",
-    "passive_ingest",
+    "chrome_ext",
+    "demo_admin_gate",
     "safety_breaker",
     "job_filter",
     "jd_analyzer",
@@ -85,24 +95,24 @@
   ],
   "nodes": [
     {
-      "id": "browser_ext",
+      "id": "chrome_ext",
       "lane": "ui",
       "col": 0,
-      "type": "external",
-      "label": "一键采集书签",
-      "sublabel": "Chrome Bookmarklet",
-      "tag": "日常浏览触发",
-      "width": 136
+      "type": "frontend",
+      "label": "Chrome 采集扩展",
+      "sublabel": "两段式自动采集 / 指纹去重",
+      "tag": "真人浏览触发",
+      "width": 140
     },
     {
-      "id": "passive_ingest",
+      "id": "demo_admin_gate",
       "lane": "workflows",
       "col": 0,
-      "type": "backend",
-      "label": "被动线索接入流",
-      "sublabel": "只读提取 / ATS 巡检",
-      "tag": "[Workflow]",
-      "width": 136
+      "type": "security",
+      "label": "双模式访问隔离门",
+      "sublabel": "Demo 沙箱 / Admin 会话",
+      "tag": "[Workflow] 密钥零泄露",
+      "width": 140
     },
     {
       "id": "safety_breaker",
@@ -110,19 +120,19 @@
       "col": 1,
       "type": "security",
       "label": "防风控熔断中枢",
-      "sublabel": "特征探测 / 拟人延时 / 配额",
+      "sublabel": "拟人延时 / 日配额 / 熔断",
       "tag": "[Workflow] 零封号",
-      "width": 136
+      "width": 140
     },
     {
-      "id": "rules_store",
-      "lane": "durable",
-      "col": 1,
-      "type": "database",
-      "label": "求职红线配置库",
-      "sublabel": "rules.json 动态规则",
-      "tag": "配置中心",
-      "width": 136
+      "id": "career_radar",
+      "lane": "workflows",
+      "col": 3,
+      "type": "backend",
+      "label": "官网直投雷达",
+      "sublabel": "标杆企业 / 公开 ATS 门户",
+      "tag": "[Workflow] 零风控渠道",
+      "width": 140
     },
     {
       "id": "job_filter",
@@ -130,9 +140,9 @@
       "col": 2,
       "type": "backend",
       "label": "严格规则初筛流",
-      "sublabel": "双休 / 时效 / 通勤 / 薪资",
+      "sublabel": "双休 / 时效 / 薪资 / 黑名单",
       "tag": "[Workflow] 硬门槛",
-      "width": 136
+      "width": 140
     },
     {
       "id": "pi_copilot",
@@ -140,19 +150,9 @@
       "col": 2,
       "type": "cloud",
       "label": "Pi 履历专家 Agent",
-      "sublabel": "STAR 挖掘 / 增量会话",
-      "tag": "[Agent] Pi 底座",
-      "width": 136
-    },
-    {
-      "id": "copilot_sessions",
-      "lane": "durable",
-      "col": 2,
-      "type": "database",
-      "label": "Pi 会话记忆库",
-      "sublabel": ".jsonl 增量树 / 压缩",
-      "tag": "持久记忆",
-      "width": 136
+      "sublabel": "增量会话 / 云端优雅降级",
+      "tag": "[Agent] 事实依从",
+      "width": 140
     },
     {
       "id": "jd_analyzer",
@@ -162,17 +162,7 @@
       "label": "JD 深度洞察 Agent",
       "sublabel": "痛点解构 / 风险识破",
       "tag": "[Agent] LLM 推理",
-      "width": 136
-    },
-    {
-      "id": "profile_store",
-      "lane": "durable",
-      "col": 3,
-      "type": "database",
-      "label": "Master Profile",
-      "sublabel": "全量真实经历事实源",
-      "tag": "Ground Truth",
-      "width": 136
+      "width": 140
     },
     {
       "id": "resume_tailor",
@@ -182,116 +172,152 @@
       "label": "简历动态裁剪 Agent",
       "sublabel": "经历重塑 / 高转化话术",
       "tag": "[Agent] LLM 生成",
-      "width": 136
+      "width": 140
     },
     {
       "id": "job_tracker",
       "lane": "workflows",
-      "col": 5,
+      "col": 4,
       "type": "messagebus",
       "label": "求职状态机流",
-      "sublabel": "MD5 防重 / 冷却期 / 流转",
+      "sublabel": "URL 指纹防重 / 冷却期",
       "tag": "[Workflow]",
-      "width": 136
+      "width": 140
+    },
+    {
+      "id": "kv_store",
+      "lane": "durable",
+      "col": 4,
+      "type": "database",
+      "label": "统一存储适配层",
+      "sublabel": "本地 JSON / Vercel KV",
+      "tag": "档案·红线·管道·会话",
+      "width": 140
+    },
+    {
+      "id": "company_resolver",
+      "lane": "agents",
+      "col": 5,
+      "type": "cloud",
+      "label": "猎头帖溯源 Agent",
+      "sublabel": "官方帖匹配 / 线索推断",
+      "tag": "[Agent] 企业定位",
+      "width": 140
     },
     {
       "id": "feishu_card",
       "lane": "ui",
       "col": 5,
       "type": "frontend",
-      "label": "飞书交互卡片",
-      "sublabel": "手机端一键审批决策",
-      "tag": "[Workflow] 闭环",
-      "width": 136
+      "label": "飞书卡片 & 双模式看板",
+      "sublabel": "一键审批 / Demo 隔离",
+      "tag": "人机协同闭环",
+      "width": 140
     }
   ],
   "edges": [
     {
-      "id": "e-trigger",
-      "from": "browser_ext",
-      "to": "passive_ingest",
-      "label": "采集投递",
-      "variant": "default"
+      "id": "e-submit",
+      "from": "chrome_ext",
+      "to": "demo_admin_gate",
+      "label": "Bearer 令牌提交",
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-safety",
-      "from": "passive_ingest",
+      "id": "e-gate-pass",
+      "from": "demo_admin_gate",
       "to": "safety_breaker",
-      "label": "风控审查",
-      "variant": "security"
+      "label": "管理员放行",
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-rules",
-      "from": "rules_store",
-      "to": "job_filter",
-      "label": "加载红线",
-      "variant": "dashed"
-    },
-    {
-      "id": "e-filter",
+      "id": "e-safe-pass",
       "from": "safety_breaker",
       "to": "job_filter",
       "label": "安全放行",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-analyze",
+      "id": "e-pass-filter",
       "from": "job_filter",
       "to": "jd_analyzer",
       "label": "通过初筛",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-copilot-mem",
-      "from": "pi_copilot",
-      "to": "copilot_sessions",
-      "label": "会话持久化",
-      "variant": "dashed"
-    },
-    {
-      "id": "e-copilot-sync",
-      "from": "pi_copilot",
-      "to": "profile_store",
-      "label": "STAR 提炼注入",
-      "variant": "emphasis"
-    },
-    {
-      "id": "e-tailor",
+      "id": "e-insight",
       "from": "jd_analyzer",
       "to": "resume_tailor",
-      "label": "洞察输出",
-      "variant": "emphasis"
+      "label": "痛点解构",
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-tailor-profile",
-      "from": "profile_store",
-      "to": "resume_tailor",
-      "label": "经历对齐",
-      "variant": "dashed"
-    },
-    {
-      "id": "e-track",
+      "id": "e-ready",
       "from": "resume_tailor",
       "to": "job_tracker",
       "label": "生成就绪",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "role": "main"
     },
     {
-      "id": "e-feishu",
+      "id": "e-push",
       "from": "job_tracker",
       "to": "feishu_card",
       "label": "推送决策",
-      "variant": "emphasis"
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-copilot-sink",
+      "from": "pi_copilot",
+      "to": "kv_store",
+      "label": "档案会话沉淀",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-tracker-sink",
+      "from": "job_tracker",
+      "to": "kv_store",
+      "label": "状态持久化",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-radar",
+      "from": "career_radar",
+      "to": "feishu_card",
+      "label": "标杆门户直达",
+      "variant": "default"
+    },
+    {
+      "id": "e-resolve",
+      "from": "job_tracker",
+      "to": "company_resolver",
+      "label": "猎头帖溯源",
+      "variant": "default"
+    },
+    {
+      "id": "e-resolve-back",
+      "from": "company_resolver",
+      "to": "job_tracker",
+      "label": "溯源回写",
+      "variant": "dashed",
+      "role": "return"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "双引擎协同：Workflow 守门 × Agent 推理",
+      "title": "双引擎协同 × 零风控双通道",
       "items": [
-        "Workflow：纯只读接入、防风控熔断、双休/时效/通勤/薪资硬性初筛、状态机去重流转",
-        "Agent：Pi 履历专家增量会话与压缩、JD 洞察识破风险、按痛点动态裁剪高转化话术",
-        "闭环：飞书卡片手机端一键决策 + Web 看板泳道追踪 + 3 分钟初始化向导"
+        "Workflow 守门：双模式隔离（Demo/Admin）、防风控熔断与日配额、双休/时效/薪资硬性初筛、URL 归一指纹防重",
+        "Agent 推理：JD 洞察识破风险、按痛点动态裁剪话术、猎头帖溯源定位真实企业、Pi 履历打磨事实依从",
+        "双通道采集：扩展两段式自动采集（客户端去重）+ 官网/公开 ATS 直投雷达，不经平台脚本探测",
+        "人机闭环：飞书卡片一键决策 + 双模式看板；统一存储适配本地 JSON 与 Vercel KV"
       ]
     }
   ]

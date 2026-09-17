@@ -10,9 +10,11 @@ export class ResumeTailor {
   constructor(outputDir: string = path.resolve(process.cwd(), 'data/resumes_tailored')) {
     this.outputDir = outputDir;
     this.llmClient = new LlmClient();
-    if (!fs.existsSync(this.outputDir)) {
-      fs.mkdirSync(this.outputDir, { recursive: true });
-    }
+    try {
+      if (!fs.existsSync(this.outputDir)) {
+        fs.mkdirSync(this.outputDir, { recursive: true });
+      }
+    } catch {}
   }
 
   /**
@@ -29,7 +31,12 @@ export class ResumeTailor {
     if (llmResult && llmResult.markdown) {
       const filename = `${job.id}_${job.company.replace(/[^\w\u4e00-\u9fa5]/g, '_')}_${job.title.replace(/[^\w\u4e00-\u9fa5]/g, '_')}.md`;
       const snapshotPath = path.join(this.outputDir, filename);
-      fs.writeFileSync(snapshotPath, llmResult.markdown, 'utf-8');
+      try {
+        if (!fs.existsSync(this.outputDir)) fs.mkdirSync(this.outputDir, { recursive: true });
+        fs.writeFileSync(snapshotPath, llmResult.markdown, 'utf-8');
+      } catch (err) {
+        // 云端只读环境容错
+      }
 
       return {
         jobId: job.id,
@@ -98,7 +105,12 @@ export class ResumeTailor {
 
     const filename = `${job.id}_${job.company.replace(/[^\w\u4e00-\u9fa5]/g, '_')}_${job.title.replace(/[^\w\u4e00-\u9fa5]/g, '_')}.md`;
     const snapshotPath = path.join(this.outputDir, filename);
-    fs.writeFileSync(snapshotPath, markdown, 'utf-8');
+    try {
+      if (!fs.existsSync(this.outputDir)) fs.mkdirSync(this.outputDir, { recursive: true });
+      fs.writeFileSync(snapshotPath, markdown, 'utf-8');
+    } catch (err) {
+      // 云端只读环境容错
+    }
 
     return {
       jobId: job.id,

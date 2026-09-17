@@ -1,8 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as os from 'node:os';
 import { execSync } from 'node:child_process';
 import { MasterProfile, PreferenceRules } from '../../types/index.js';
 import { LlmConfig } from '../ai/LlmClient.js';
+import { readJson, writeJson } from '../../storage/index.js';
 
 export interface OnboardingStatus {
   initialized: boolean;
@@ -13,14 +15,45 @@ export interface OnboardingStatus {
 }
 
 export class OnboardingService {
-  private statusFilePath: string;
+  private statusKey: string;
 
   constructor() {
-    this.statusFilePath = path.resolve(process.cwd(), 'data/system_status.json');
+    this.statusKey = 'data/system_status.json';
   }
 
   /**
-   * 获取当前系统初始化状态
+   * 异步获取系统初始化状态（优先从统一存储层读取）
+   */
+  public async getSystemStatusAsync(): Promise<OnboardingStatus> {
+    const prof = await readJson<MasterProfile | null>('data/profile/master_profile.json', null);
+    const llm = await readJson<LlmConfig | null>('data/preferences/llm_config.json', null);
+    const status = await readJson<{ initialized?: boolean; initializedAt?: string } | null>(this.statusKey, null);
+
+    let hasProfile = false;
+    let candidateName = '未设置';
+    if (prof?.basicInfo?.name && prof.basicInfo.name !== '张三') {
+      hasProfile = true;
+      candidateName = prof.basicInfo.name;
+    }
+
+    let hasLlm = false;
+    const apiKey = llm?.apiKey || process.env.LLM_API_KEY;
+    if (apiKey && apiKey.trim().length > 5) {
+      hasLlm = true;
+    }
+
+    const initialized = Boolean(status?.initialized) || (hasProfile && hasLlm);
+    return {
+      initialized,
+      hasLlm,
+      hasProfile,
+      candidateName,
+      initializedAt: status?.initializedAt
+    };
+  }
+
+  /**
+   * 同步快速获取当前系统初始化状态（用于本地或快速兜底）
    */
   public getSystemStatus(): OnboardingStatus {
     const profilePath = path.resolve(process.cwd(), 'data/profile/master_profile.json');
@@ -38,8 +71,8 @@ export class OnboardingService {
       } catch (e) {}
     }
 
-    let hasLlm = false;
-    if (fs.existsSync(llmPath)) {
+    let hasLlm = Boolean(process.env.LLM_API_KEY && process.env.LLM_API_KEY.length > 5);
+    if (!hasLlm && fs.existsSync(llmPath)) {
       try {
         const llm = JSON.parse(fs.readFileSync(llmPath, 'utf-8'));
         if (llm.apiKey && llm.apiKey.trim().length > 5) {
@@ -50,14 +83,14 @@ export class OnboardingService {
 
     let initialized = false;
     let initializedAt: string | undefined = undefined;
-    if (fs.existsSync(this.statusFilePath)) {
+    const absStatus = path.resolve(process.cwd(), this.statusKey);
+    if (fs.existsSync(absStatus)) {
       try {
-        const status = JSON.parse(fs.readFileSync(this.statusFilePath, 'utf-8'));
+        const status = JSON.parse(fs.readFileSync(absStatus, 'utf-8'));
         initialized = Boolean(status.initialized);
         initializedAt = status.initializedAt;
       } catch (e) {}
     } else {
-      // 若没有显式标记文件，但已经有真实档案和 LLM，也算已就绪
       initialized = hasProfile && hasLlm;
     }
 
@@ -92,31 +125,27 @@ export class OnboardingService {
         },
         body: JSON.stringify({
           model: config.model,
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant.' },
-            { role: 'user', content: 'Please respond with: OK' }
-          ],
-          temperature: 0.1,
-          max_tokens: 30
+          messages: [{ role: 'user', content: 'Say "OK" if you can hear me.' }],
+          max_tokens: 10
         })
       });
       clearTimeout(timer);
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => '');
-        return { success: false, message: `模型接口返回错误 HTTP ${resp.status}: ${errText.slice(0, 100)}` };
+        return { success: false, message: `接口响应失败 HTTP ${resp.status}: ${errText.slice(0, 100)}` };
       }
 
       const data = await resp.json() as any;
-      const content = data?.choices?.[0]?.message?.content || '';
-      return { success: true, message: `连接成功！模型响应: ${content.trim() || 'OK'}` };
+      const reply = data?.choices?.[0]?.message?.content || 'OK';
+      return { success: true, message: `连接成功！模型回应: ${reply.trim()}` };
     } catch (e: any) {
-      return { success: false, message: `连接失败: ${e.message}` };
+      return { success: false, message: `请求出错: ${e.message}` };
     }
   }
 
   /**
-   * 从上传的文件中提取纯文本
+   * 从用户上传的简历文件中提取纯文本（支持 PDF/TXT/MD/JSON）
    */
   public extractTextFromFile(buffer: Buffer, fileName: string): string {
     const ext = path.extname(fileName).toLowerCase();
@@ -126,8 +155,8 @@ export class OnboardingService {
     }
 
     if (ext === '.pdf') {
-      // 写入临时文件调用 pdftotext
-      const tempPath = path.resolve(process.cwd(), `data/temp_resume_${Date.now()}.pdf`);
+      // 写入系统临时目录（兼容 Vercel Serverless /tmp）
+      const tempPath = path.join(os.tmpdir(), `temp_resume_${Date.now()}.pdf`);
       try {
         fs.writeFileSync(tempPath, buffer);
         const text = execSync(`pdftotext "${tempPath}" -`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
@@ -170,38 +199,25 @@ export class OnboardingService {
       "major": "专业"
     }
   },
-  "summary": [
-    "核心优势与专长概括1",
-    "核心优势2"
-  ],
+  "summary": ["个人核心优势1", "核心优势2"],
   "workExperiences": [
     {
       "company": "公司名称",
-      "role": "担任职务",
-      "startDate": "2021.06",
-      "endDate": "至今",
-      "description": "主要职责与业务范畴概述",
+      "role": "职位",
+      "startDate": "YYYY.MM",
+      "endDate": "至今或YYYY.MM",
+      "description": "岗位职责概述",
       "highlights": [
-        {
-          "module": "重点项目或模块名称",
-          "details": "STAR 原则量化成果与技术方案细节"
-        }
+        { "module": "关键项目或能力模块", "details": "STAR原则量化成果细节" }
       ]
     }
   ],
   "skills": {
-    "aiAndDigitalization": ["核心专业技能1", "技能2"],
-    "industrialEngineering": ["行业工程实践技能1"],
-    "projectManagement": ["项目与团队管理能力1"],
-    "languages": ["中文 (母语)", "英语 (商务流利)"],
-    "certifications": [
-      {
-        "title": "证书名称",
-        "org": "发证机构",
-        "date": "获得时间",
-        "note": "备注/成绩"
-      }
-    ]
+    "aiAndDigitalization": ["技能标签1", "技能标签2"],
+    "industrialEngineering": ["工程技能1"],
+    "projectManagement": ["管理能力1"],
+    "languages": ["英语"],
+    "certifications": []
   }
 }`;
 
@@ -216,65 +232,54 @@ export class OnboardingService {
         model: config.model,
         messages: [
           { role: 'system', content: promptSystem },
-          { role: 'user', content: `以下是我的原始简历内容，请解构成 MasterProfile JSON：\n\n${rawResumeText.slice(0, 10000)}` }
+          { role: 'user', content: `以下是求职者的原始简历内容：\n\n${rawResumeText}` }
         ],
-        temperature: 0.1,
-        max_tokens: 3000
+        temperature: 0.2,
+        max_tokens: 3500
       })
     });
 
     if (!resp.ok) {
-      throw new Error(`LLM 解析简历失败 HTTP ${resp.status}`);
+      const err = await resp.text();
+      throw new Error(`LLM 解析失败 HTTP ${resp.status}: ${err.slice(0, 100)}`);
     }
 
     const data = await resp.json() as any;
     const content = data?.choices?.[0]?.message?.content || '';
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('LLM 未返回合法的 JSON 格式简历');
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error('大模型未能输出合法的 Profile JSON 结构');
     }
 
-    return JSON.parse(jsonMatch[0]);
+    return JSON.parse(match[0]) as MasterProfile;
   }
 
   /**
-   * Onboarding 对齐对话：与用户互动，根据反馈动态调整 Profile 和 Rules
+   * 与用户互动对齐需求与偏好规则
    */
   public async alignWithUser(
     userMessage: string,
-    draftProfile: MasterProfile,
-    draftRules: PreferenceRules,
-    chatHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+    currentProfile: MasterProfile,
+    currentRules: PreferenceRules,
+    history: Array<{ role: 'user' | 'assistant'; content: string }>,
     config: LlmConfig
-  ): Promise<{
-    reply: string;
-    updatedProfile: MasterProfile;
-    updatedRules: PreferenceRules;
-  }> {
-    const promptSystem = `你是由 Pi Coding Agent 驱动的 Job-Hunter OS 专属求职合伙人。
-你正在与新用户进行【入职启动前的信息对齐（Onboarding Alignment）】。
-你的任务是：
-1. 深入倾听用户对当前提取的【个人档案】和【求职偏好规则】的调整诉求；
-2. 如果用户提出了修改建议（例如：“改一下我的目标城市”、“期望薪资提高到20K”、“把某某公司加入黑名单”、“补充一段我的专业技能”等），你必须在回答的同时，更新对应的 JSON 数据；
-3. 输出严格的格式规范：
-在你的文本回复最后，附带一个特定的代码块（如果未变更则保持原样输出）：
-\`\`\`state_update
+  ): Promise<{ reply: string; updatedProfile?: MasterProfile; updatedRules?: PreferenceRules }> {
+    const promptSystem = `你是一位专业、富有同理心的专属求职合伙人顾问。
+正在进行系统初始化（Onboarding）需求对齐。
+请根据用户的输入，协助用户澄清求职意向（远程优先还是本地？期望薪资？是否接受出差？有哪些排斥的行业、公司或负面要求比如单休、外包？）。
+
+当用户表达了明确的规则或偏好时，请在回复的末尾输出带有标记的代码块：
+\`\`\`rules_update
 {
-  "updatedProfile": { ...更新后的 MasterProfile 全量 JSON... },
-  "updatedRules": { ...更新后的 PreferenceRules 全量 JSON... }
+  ...更新后的完整 PreferenceRules JSON...
 }
 \`\`\`
-回答语气要专业、干练、富有同理心与启发性。`;
 
-    const statePayload = {
-      currentDraftProfile: draftProfile,
-      currentDraftRules: draftRules
-    };
+当前用户的规则草案：\n${JSON.stringify(currentRules, null, 2)}`;
 
     const messages = [
       { role: 'system', content: promptSystem },
-      { role: 'system', content: `【当前草稿状态】:\n${JSON.stringify(statePayload, null, 2)}` },
-      ...chatHistory.slice(-4),
+      ...history.slice(-6),
       { role: 'user', content: userMessage }
     ];
 
@@ -289,67 +294,54 @@ export class OnboardingService {
         model: config.model,
         messages,
         temperature: 0.3,
-        max_tokens: 3500
+        max_tokens: 2000
       })
     });
 
     if (!resp.ok) {
-      throw new Error(`LLM 对齐对话请求失败 HTTP ${resp.status}`);
+      const err = await resp.text();
+      throw new Error(`对齐对话失败: ${err.slice(0, 100)}`);
     }
 
     const data = await resp.json() as any;
-    const fullReply = data?.choices?.[0]?.message?.content || '';
+    const content = data?.choices?.[0]?.message?.content || '';
 
-    let updatedProfile = draftProfile;
-    let updatedRules = draftRules;
-    let cleanReply = fullReply;
+    let updatedRules: PreferenceRules | undefined = undefined;
+    let cleanReply = content;
 
-    const match = fullReply.match(/```state_update([\s\S]*?)```/);
-    if (match) {
+    const rulesMatch = content.match(/```rules_update\s*([\s\S]*?)\s*```/);
+    if (rulesMatch) {
       try {
-        const parsed = JSON.parse(match[1]);
-        if (parsed.updatedProfile) updatedProfile = parsed.updatedProfile;
-        if (parsed.updatedRules) updatedRules = parsed.updatedRules;
-        cleanReply = fullReply.replace(/```state_update[\s\S]*?```/, '').trim();
-      } catch (e) {
-        console.warn('解析 state_update 异常:', e);
-      }
+        updatedRules = JSON.parse(rulesMatch[1]);
+        cleanReply = content.replace(/```rules_update[\s\S]*?```/, '').trim();
+      } catch (e) {}
     }
 
     return {
       reply: cleanReply,
-      updatedProfile,
       updatedRules
     };
   }
 
   /**
-   * 完成 Onboarding：将对齐好的档案、偏好与模型配置固化落盘
+   * 完成 Onboarding：将对齐好的档案、偏好与模型配置持久化（支持 Vercel KV 和本地 FS）
    */
-  public completeOnboarding(profile: MasterProfile, rules: PreferenceRules, llmConfig: LlmConfig): void {
-    const profileDir = path.resolve(process.cwd(), 'data/profile');
-    const prefDir = path.resolve(process.cwd(), 'data/preferences');
-    if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
-    if (!fs.existsSync(prefDir)) fs.mkdirSync(prefDir, { recursive: true });
+  public async completeOnboarding(profile: MasterProfile, rules: PreferenceRules, llmConfig: LlmConfig): Promise<void> {
+    // 1. 持久化个人档案
+    await writeJson('data/profile/master_profile.json', profile);
 
-    // 1. 落盘个人档案
-    const profilePath = path.resolve(profileDir, 'master_profile.json');
-    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2), 'utf-8');
+    // 2. 持久化求职偏好
+    await writeJson('data/preferences/rules.json', rules);
 
-    // 2. 落盘求职偏好
-    const rulesPath = path.resolve(prefDir, 'rules.json');
-    fs.writeFileSync(rulesPath, JSON.stringify(rules, null, 2), 'utf-8');
-
-    // 3. 落盘大模型配置
-    const llmPath = path.resolve(prefDir, 'llm_config.json');
-    fs.writeFileSync(llmPath, JSON.stringify(llmConfig, null, 2), 'utf-8');
+    // 3. 持久化大模型配置
+    await writeJson('data/preferences/llm_config.json', llmConfig);
 
     // 4. 标记系统已初始化
-    fs.writeFileSync(this.statusFilePath, JSON.stringify({
+    await writeJson(this.statusKey, {
       initialized: true,
       initializedAt: new Date().toISOString(),
       candidateName: profile.basicInfo?.name || '求职者'
-    }, null, 2), 'utf-8');
+    });
 
     console.log(`🎉 [Onboarding] 系统配置完成！候选人【${profile.basicInfo?.name}】已成功初始化并启动。`);
   }

@@ -2,64 +2,121 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Job-Hunter 一键书签助手配置</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job-Hunter 采集器与扩展配置中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F3F4F6; padding: 40px; display: flex; justify-content: center; }
-    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 680px; width: 100%; padding: 32px; }
-    h1 { font-size: 24px; color: #111827; margin-bottom: 8px; }
-    p { color: #4B5563; font-size: 15px; line-height: 1.6; }
-    .btn-bookmark { display: inline-block; background: #2563EB; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin: 20px 0; cursor: move; box-shadow: 0 4px 10px rgba(37,99,235,0.25); }
-    .btn-bookmark:hover { background: #1D4ED8; }
-    .step { background: #F9FAFB; border-left: 4px solid #2563EB; padding: 14px 18px; margin: 12px 0; border-radius: 0 8px 8px 0; }
-    .code-box { background: #1E293B; color: #E2E8F0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto; word-break: break-all; margin-top: 10px; }
-    .token-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-    .token-label { font-size: 13px; font-weight: 600; color: #374151; }
-    .token-val { font-family: monospace; font-size: 12px; background: #EEF2FF; border: 1px solid #C7D2FE; color: #4338CA; padding: 4px 10px; border-radius: 6px; }
-    .btn-sm { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff; color: #374151; cursor: pointer; font-weight: 600; }
-    .btn-sm:hover { background: #F9FAFB; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   </style>
 </head>
-<body>
-  <div class="card">
-    <h1>🎯 求职助手 · 一键书签采集工具</h1>
-    <p>通过这个工具，你在自己日常的 Chrome 里正常搜索职位，<b>点一下书签栏</b>，职位瞬间送达 Agent 并自动完成：<br>
-    <b>3个月时效审查 ➔ 周末严格双休排查 ➔ 严苛通勤规划 ➔ 针对性简历与话术裁剪 ➔ 推送飞书！</b></p>
+<body class="bg-slate-50 text-slate-900 min-h-screen p-6 md:p-12 flex justify-center items-start">
+  <div class="max-w-3xl w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-8">
+    
+    <!-- 顶部标题 -->
+    <div class="border-b border-slate-200 pb-6">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-black">🎯</div>
+          <div>
+            <h1 class="text-xl font-bold text-slate-900">Job-Hunter 职位采集连接中心</h1>
+            <p class="text-xs text-slate-500">零风控 · 真实浏览器正常浏览 · 智能初筛与飞书自动推送</p>
+          </div>
+        </div>
+        <a href="/" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg transition">
+          返回看板 ➔
+        </a>
+      </div>
 
-    <div class="token-row">
-      <span class="token-label">🔑 本账号采集令牌（已自动嵌入书签）：</span>
-      <span class="token-val" id="token-display">加载中...</span>
-      <button class="btn-sm" onclick="regenerateToken()">🔄 重置令牌</button>
-      <button class="btn-sm" onclick="copyToken()">📋 复制</button>
+      <!-- 专属令牌卡片 -->
+      <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-xs font-semibold text-slate-600 mb-1">🔑 您的专属采集授权令牌 (Collector Token)：</div>
+          <div id="token-display" class="font-mono text-xs text-indigo-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg inline-block">加载中...</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyToken()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 transition">
+            📋 复制令牌
+          </button>
+          <button onclick="regenerateToken()" class="px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg text-xs font-bold text-rose-600 transition">
+            🔄 重置令牌
+          </button>
+        </div>
+      </div>
     </div>
 
-    <h3>👉 快速安装（只需 3 秒）：</h3>
-    <div class="step">
-      <b>方法 1（最简单）：</b> 把下面这个蓝色按钮，直接<b>用鼠标拖拽到你 Chrome 浏览器的【书签栏】</b>：<br>
-      <a class="btn-bookmark" id="bookmark-btn" href="#">📌 投递到 Job-Hunter</a>
+    <!-- 方案一：Chrome 专属扩展程序（极力推荐） -->
+    <div class="bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/50 border-2 border-indigo-500/30 rounded-2xl p-6 relative overflow-hidden">
+      <div class="absolute top-4 right-4 bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+        🌟 强烈推荐 · 永不隐藏
+      </div>
+      <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 mb-2">
+        <span>🧩 方案 1：安装 Chrome 专属扩展程序</span>
+      </h2>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        彻底解决书签栏自动隐藏的问题！扩展图标<b>常驻浏览器右上角</b>，突破一切网站 CSP 拦截限制。在 Boss直聘、猎聘、智联浏览时，页面右下角会自动浮现<b>【🎯 发现 N 个岗位 | 点击同步】</b>悬浮小胶囊，翻页自动感知，1 秒入库！
+      </p>
+
+      <div class="space-y-3 text-xs bg-white/90 border border-indigo-100 rounded-xl p-4">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
+          <span>🚀 10 秒免编译载入指引：</span>
+        </div>
+        <ol class="list-decimal list-inside space-y-2 text-slate-700 leading-relaxed">
+          <li>在 Chrome 地址栏输入并回车：<code class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-mono font-bold select-all">chrome://extensions/</code></li>
+          <li>打开页面右上角的 <b>「开发者模式」 (Developer mode)</b> 开关；</li>
+          <li>点击左上角的 <b>「加载已解压的扩展程序」 (Load unpacked)</b>；</li>
+          <li>在弹出的文件窗口中，选中本项目根目录下的 <code class="bg-slate-100 text-indigo-700 font-bold px-2 py-0.5 rounded font-mono">extension</code> 文件夹；</li>
+          <li>点击浏览器右上角扩展拼图图标，把 <b>Job-Hunter 采集助手</b> 固定在工具栏即可！</li>
+        </ol>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+        <div>📍 服务地址已自动适配：<span id="service-origin" class="font-mono font-bold text-slate-700">加载中...</span></div>
+      </div>
     </div>
 
-    <div class="step">
-      <b>方法 2（手动添加）：</b> 在 Chrome 书签栏右键 ➔「添加网页」➔ 名称输入 <code>📌 投递到 Job-Hunter</code> ➔ 网址粘贴下面这行：
-      <div class="code-box" id="bookmark-code">加载中...</div>
+    <!-- 方案二：一键书签（Bookmarklet）免安装方案 -->
+    <div class="border border-slate-200 rounded-2xl p-6 bg-white">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <span>📌 方案 2：一键书签小工具（免安装备选）</span>
+        </h2>
+        <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">即拖即用</span>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        如果你的浏览器方便常驻显示书签栏（按快捷键 <kbd class="px-1.5 py-0.5 bg-slate-100 border rounded text-[11px]">Cmd/Ctrl + Shift + B</kbd>），也可直接把下方按钮拖到书签栏中：
+      </p>
+
+      <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-6 text-center">
+        <a id="bookmark-btn" href="#" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-sm transition cursor-move">
+          <span>📌 投递到 Job-Hunter</span>
+        </a>
+        <div class="text-[11px] text-slate-400 mt-2">（用鼠标按住上方蓝色按钮，拖入浏览器顶部的书签栏即可）</div>
+      </div>
     </div>
 
-    <h3>💡 使用方法：</h3>
-    <p>1. 在平时正常的 Chrome 里打开 <b>Boss直聘 / 猎聘 / 智联</b>，搜索如「AI产品经理」或「数字化专家」；<br>
-    2. 看到搜索出来的岗位列表时，在书签栏点一下 <b>📌 投递到 Job-Hunter</b>；<br>
-    3. 网页右上角会弹出采集成功提示，打开你的<b>手机飞书</b>即可收到精心筛选的推荐卡片！</p>
+    <!-- 安全说明 -->
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-800 leading-relaxed">
+      <b>🛡️ 为什么完全零风控、0 封号风险？</b><br>
+      采集助手只在你在浏览器里正常搜索、浏览时，提取当前网页前台 DOM 的公开职位文字。整个过程完全属于你真人的正常上网行为，招聘软件服务器感知不到任何自动化探测流量，彻底告别账号异常。
+    </div>
 
-    <p style="font-size:13px;color:#6B7280;">🔒 安全说明：书签通过本账号专属令牌授权提交；任何人拿到或泄露令牌，都可在此页一键重置使其立即失效。</p>
   </div>
 
   <script>
     let collectorToken = '';
 
+    function copyToken() {
+      if (!collectorToken) return;
+      navigator.clipboard.writeText(collectorToken).then(() => alert('✅ 已复制令牌到剪贴板！'));
+    }
+
     function buildBookmarklet() {
       const base = location.origin;
       const url = `javascript:(function(){const s=document.createElement('script');s.src='${base}/bookmarklet.js?token=${collectorToken}&t='+Date.now();document.body.appendChild(s);})();`;
-      document.getElementById('bookmark-btn').href = url;
-      document.getElementById('bookmark-code').innerText = url;
+      const btn = document.getElementById('bookmark-btn');
+      if (btn) btn.href = url;
       document.getElementById('token-display').innerText = collectorToken;
+      document.getElementById('service-origin').innerText = base;
     }
 
     async function loadToken() {
@@ -72,24 +129,20 @@
           return;
         }
       } catch (e) {}
-      document.getElementById('token-display').innerText = '令牌加载失败，请重新登录';
+      document.getElementById('token-display').innerText = '令牌加载失败，请登录管理员账号';
     }
 
     async function regenerateToken() {
-      if (!confirm('重置后旧令牌立即失效，已安装的书签将无法提交，需要重新拖拽安装。确定重置？')) return;
+      if (!confirm('重置后旧扩展与书签将立即失效，需要在扩展中填入新令牌。确定重置？')) return;
       const res = await fetch('/auth/collector-token/regenerate', { method: 'POST' });
       const data = await res.json();
       if (data.code === 0) {
         collectorToken = data.collectorToken;
         buildBookmarklet();
-        alert('✅ 令牌已重置，请重新拖拽安装书签！');
+        alert('✅ 令牌已成功重置！');
       } else {
         alert('重置失败: ' + data.message);
       }
-    }
-
-    function copyToken() {
-      navigator.clipboard.writeText(collectorToken).then(() => alert('已复制令牌'));
     }
 
     window.addEventListener('DOMContentLoaded', loadToken);

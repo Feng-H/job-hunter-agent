@@ -1,6 +1,5 @@
 import * as crypto from 'node:crypto';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { readJson, writeJson } from '../../storage/index.js';
 
 interface AccountRecord {
   username: string;
@@ -36,26 +35,27 @@ const FAILED_WINDOW_MS = 15 * 60 * 1000;        // 15 分钟
 const MIN_PASSWORD_LENGTH = 8;
 
 export class AuthService {
-  private statePath: string;
+  private stateKey: string;
   private state: AuthState;
+  private ready: Promise<void>;
 
-  constructor(stateDir?: string) {
-    const dir = stateDir || path.resolve(process.cwd(), 'data/auth');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    this.statePath = path.join(dir, 'auth_state.json');
+  constructor() {
+    this.stateKey = 'data/auth/auth_state.json';
+    this.state = { accounts: [], sessions: [], failedAttempts: {} };
+    this.ready = this.loadState();
+  }
 
-    if (fs.existsSync(this.statePath)) {
-      try {
-        this.state = JSON.parse(fs.readFileSync(this.statePath, 'utf-8'));
-      } catch (e) {
-        this.state = { accounts: [], sessions: [], failedAttempts: {} };
-      }
-    } else {
-      this.state = { accounts: [], sessions: [], failedAttempts: {} };
-    }
-    this.state.accounts = this.state.accounts || [];
-    this.state.sessions = this.state.sessions || [];
-    this.state.failedAttempts = this.state.failedAttempts || {};
+  public async ensureReady(): Promise<void> {
+    await this.ready;
+  }
+
+  private async loadState(): Promise<void> {
+    const loaded = await readJson<AuthState>(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
+    this.state = {
+      accounts: loaded.accounts || [],
+      sessions: loaded.sessions || [],
+      failedAttempts: loaded.failedAttempts || {}
+    };
     this.cleanupExpiredSessions();
   }
 
@@ -73,7 +73,7 @@ export class AuthService {
   }
 
   private save(): void {
-    fs.writeFileSync(this.statePath, JSON.stringify(this.state, null, 2), 'utf-8');
+    void writeJson(this.stateKey, this.state);
   }
 
   private getAccount(username: string): AccountRecord | undefined {

@@ -46,22 +46,48 @@
         <button id="nav-profile" onclick="switchView('profile')" class="px-3.5 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
           👤 全量档案库
         </button>
+        <button id="nav-radar" onclick="switchView('radar')" class="px-3.5 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          🛰️ 官网直投雷达
+        </button>
       </nav>
     </div>
 
     <!-- 右侧动作 -->
     <div class="flex items-center space-x-3">
-      <a href="/onboarding" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center gap-1">
+      <!-- 身份标识与登录态 -->
+      <div id="user-status-bar" class="flex items-center gap-2">
+        <span id="user-role-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          👀 演示预览模式
+        </span>
+        <a id="btn-auth-action" href="/login" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+          🔑 管理员登录
+        </a>
+      </div>
+
+      <a id="btn-onboarding-link" href="/onboarding" class="hidden px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition items-center gap-1">
         <span>✨ 快速配置向导</span>
       </a>
-      <button onclick="triggerScan()" class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
-        ⚡ 立即同步 Chrome 招聘页
+      <button onclick="triggerScan()" class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-slate-800 hover:bg-slate-900 text-white shadow-sm transition">
+        ⚡ 极速扫描
       </button>
       <button onclick="loadJobs()" title="刷新看板" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
         🔄
       </button>
     </div>
   </header>
+
+  <!-- Demo 演示模式隔离提示横幅 -->
+  <div id="demo-banner" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-2 flex items-center justify-between text-xs font-medium shadow-sm">
+    <div class="flex items-center space-x-2">
+      <span class="px-1.5 py-0.5 bg-black/20 rounded text-[11px] font-bold tracking-wide uppercase">DEMO MODE</span>
+      <span>您当前处于<b>公开演示环境</b>，展示脱敏示例数据。<b>私有 LLM 密钥与真实投递库已安全隔离</b>，演示操作不会产生真实计费或修改生产库。</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/login" class="px-3 py-1 bg-white text-amber-800 hover:bg-amber-50 rounded-lg text-xs font-bold shadow-sm transition">
+        切换到管理员真实看板 ➔
+      </a>
+    </div>
+  </div>
 
   <!-- 首次使用引导条 (动态判断) -->
   <div id="onboarding-banner" class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white px-6 py-2.5 flex items-center justify-between shadow-sm hidden">
@@ -648,6 +674,12 @@
           <div id="drawer-reasons" class="bg-amber-50/60 border border-amber-200/80 rounded-lg p-3.5 text-xs text-amber-900 space-y-1"></div>
         </div>
 
+        <!-- 猎头帖真实企业溯源（仅猎头帖显示） -->
+        <div id="resolution-panel" class="hidden">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">🕵️ 猎头帖 · 真实招聘企业溯源</h4>
+          <div id="resolution-body" class="bg-amber-50/60 border border-amber-200/80 rounded-lg p-3.5"></div>
+        </div>
+
         <!-- 推荐打招呼话术 -->
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -680,17 +712,66 @@
       </div>
     </div>
 
+    <!-- 视图 4：官网直投雷达（零风控渠道） -->
+    <div id="view-radar" class="h-full overflow-y-auto p-6 hidden">
+      <div class="max-w-5xl mx-auto space-y-6">
+
+        <!-- 雷达说明与检索区 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                🛰️ 地区官网直投雷达
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">零风控 · 免登录 · 公开 ATS</span>
+              </h2>
+              <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                直接从企业官网与公开招聘系统（飞书招聘 / Moka / Workday / SmartRecruiters）发现岗位，<b>完全不经过招聘平台账号</b>，彻底零封号风险。输入目标城市，优先呈现该区域标杆企业清单。
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">🎯 目标城市</label>
+              <input id="radar-city-input" type="text" placeholder="如：长沙 / 上海 / 深圳 / 全国远程"
+                class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-xs font-semibold text-slate-600 mb-1.5">🏭 行业方向（可选）</label>
+              <input id="radar-industry-input" type="text" placeholder="如：AI / 智能制造 / 外企研发中心"
+                class="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <button onclick="searchRadarPortals()" id="radar-search-btn"
+              class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-sm transition whitespace-nowrap">
+              🔍 检索区域标杆企业
+            </button>
+          </div>
+          <div id="radar-source-note" class="hidden mt-3 text-[11px] text-slate-400"></div>
+        </div>
+
+        <!-- 门户卡片网格 -->
+        <div id="radar-portals-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 卡片由 JS 动态渲染 -->
+        </div>
+
+        <div id="radar-empty-state" class="text-center py-12 text-slate-400 text-sm">
+          🛰️ 输入目标城市并点击检索，即可发现该区域的零风控直投企业门户
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- 前端核心控制逻辑 -->
   <script>
     let allJobs = [];
     let currentDrawerJob = null;
+    window.IS_DEMO = true;
 
     // 页面加载
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadAuthPanel();
       checkSystemStatus();
-      loadAuthPanel();
       loadJobs();
       loadSafetyStatus();
       loadLlmConfig();
@@ -704,9 +785,8 @@
     async function checkSystemStatus() {
       try {
         const res = await fetch('/api/system/status');
-        if (res.status === 401) { location.href = '/login'; return; }
         const data = await res.json();
-        if (!data.initialized) {
+        if (!data.initialized && !window.IS_DEMO) {
           document.getElementById('onboarding-banner')?.classList.remove('hidden');
         }
       } catch (e) {}
@@ -717,15 +797,51 @@
       try {
         const res = await fetch('/auth/status');
         const data = await res.json();
-        if (!data.loggedIn) { location.href = '/login'; return; }
-        document.getElementById('auth-current-user').innerText = '👤 ' + (data.username || '已登录');
+        
+        // 判断是否为显式 demo 路径或未登录
+        const isDemoRoute = window.location.pathname === '/demo';
+        window.IS_DEMO = isDemoRoute || !data.loggedIn;
 
-        const tokenRes = await fetch('/auth/collector-token');
-        const tokenData = await tokenRes.json();
-        if (tokenData.code === 0) {
-          document.getElementById('auth-token-display').innerText = tokenData.collectorToken || '无';
+        const roleBadge = document.getElementById('user-role-badge');
+        const authBtn = document.getElementById('btn-auth-action');
+        const demoBanner = document.getElementById('demo-banner');
+        const obLink = document.getElementById('btn-onboarding-link');
+
+        if (window.IS_DEMO) {
+          demoBanner?.classList.remove('hidden');
+          if (roleBadge) {
+            roleBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+            roleBadge.innerText = '👀 演示预览模式';
+          }
+          if (authBtn) {
+            authBtn.innerText = '🔑 管理员登录';
+            authBtn.href = '/login';
+            authBtn.onclick = null;
+          }
+          if (obLink) obLink.classList.add('hidden');
+        } else {
+          demoBanner?.classList.add('hidden');
+          if (roleBadge) {
+            roleBadge.className = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+            roleBadge.innerText = '👤 管理员: ' + (data.username || 'Admin');
+          }
+          if (authBtn) {
+            authBtn.innerText = '🚪 退出登录';
+            authBtn.href = '#';
+            authBtn.onclick = (e) => { e.preventDefault(); doLogout(); };
+          }
+          if (obLink) obLink.classList.remove('hidden');
+          document.getElementById('auth-current-user').innerText = '👤 ' + (data.username || '已登录');
+
+          const tokenRes = await fetch('/auth/collector-token');
+          const tokenData = await tokenRes.json();
+          if (tokenData.code === 0) {
+            document.getElementById('auth-token-display').innerText = tokenData.collectorToken || '无';
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        window.IS_DEMO = true;
+      }
     }
 
     async function changePassword() {
@@ -772,7 +888,7 @@
 
     // 视图切换
     function switchView(viewName) {
-      ['kanban', 'settings', 'profile'].forEach(v => {
+      ['kanban', 'settings', 'profile', 'radar'].forEach(v => {
         document.getElementById(`view-${v}`).classList.add('hidden');
         document.getElementById(`nav-${v}`).classList.remove('bg-indigo-50', 'text-indigo-700');
         document.getElementById(`nav-${v}`).classList.add('text-slate-600');
@@ -780,6 +896,107 @@
       document.getElementById(`view-${viewName}`).classList.remove('hidden');
       document.getElementById(`nav-${viewName}`).classList.add('bg-indigo-50', 'text-indigo-700');
       document.getElementById(`nav-${viewName}`).classList.remove('text-slate-600');
+
+      // 首次进入雷达视图时自动加载精选门户
+      if (viewName === 'radar' && !window._radarLoaded) {
+        window._radarLoaded = true;
+        loadRadarPortals();
+      }
+    }
+
+    // ================= 官网直投雷达 =================
+    const PORTAL_TYPE_BADGES = {
+      'FEISHU_ATS': { label: '飞书招聘 ATS', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+      'MOKA_ATS': { label: 'Moka ATS', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+      'BEISEN_ATS': { label: '北森 ATS', cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+      'WORKDAY': { label: 'Workday', cls: 'bg-slate-100 text-slate-700 border-slate-300' },
+      'OFFICIAL_CAREERS': { label: '企业官网 Careers', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+    };
+
+    function renderRadarPortals(portals, source) {
+      const grid = document.getElementById('radar-portals-grid');
+      const empty = document.getElementById('radar-empty-state');
+      const note = document.getElementById('radar-source-note');
+
+      if (!portals || portals.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      if (note) {
+        note.classList.remove('hidden');
+        note.innerText = source === 'ai_enhanced'
+          ? '✨ 结果由预置精选库 + AI 动态挖掘共同生成（已调用管理员私有大模型）'
+          : '📚 结果来自预置精选企业门户库（未消耗任何 LLM 配额）';
+      }
+
+      grid.innerHTML = portals.map(p => {
+        const badge = PORTAL_TYPE_BADGES[p.portalType] || PORTAL_TYPE_BADGES['OFFICIAL_CAREERS'];
+        return `
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition flex flex-col">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <h3 class="font-bold text-slate-900 text-sm leading-snug">${p.companyName}</h3>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${badge.cls}">${badge.label}</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px]">📍 ${p.city}</span>
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px]">🏭 ${p.industry || '综合'}</span>
+            ${p.doubleWeekend ? '<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[11px] font-semibold">✅ 双休</span>' : ''}
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed flex-1">${p.description || ''}</p>
+          <a href="${p.portalUrl}" target="_blank" rel="noopener noreferrer"
+            class="mt-4 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+            🚀 打开官方招聘门户直达
+          </a>
+        </div>
+      `;}).join('');
+    }
+
+    async function loadRadarPortals() {
+      try {
+        const res = await fetch('/api/radar/portals');
+        const data = await res.json();
+        if (data.code === 0) {
+          renderRadarPortals(data.portals, data.source);
+        }
+      } catch (e) {
+        console.error('加载雷达门户失败:', e);
+      }
+    }
+
+    async function searchRadarPortals() {
+      const city = document.getElementById('radar-city-input').value.trim();
+      const industry = document.getElementById('radar-industry-input').value.trim();
+      const btn = document.getElementById('radar-search-btn');
+
+      if (window.IS_DEMO) {
+        alert('💡【演示模式】当前展示精选示例门户。登录管理员账号后，可按任意城市动态检索区域标杆企业官网。');
+        loadRadarPortals();
+        return;
+      }
+
+      btn.innerText = '⏳ 检索中...';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/radar/portals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ city, industry })
+        });
+        const data = await res.json();
+        if (data.code === 0) {
+          renderRadarPortals(data.portals, data.source);
+        } else {
+          alert('检索失败: ' + (data.error || data.message || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求异常: ' + e.message);
+      } finally {
+        btn.innerText = '🔍 检索区域标杆企业';
+        btn.disabled = false;
+      }
     }
 
     // 获取并渲染岗位看板
@@ -831,7 +1048,10 @@
             <span class="px-1.5 py-0.5 rounded text-xs font-bold ${scoreColor}">${score}分</span>
           </div>
           <div class="text-xs text-slate-500 font-medium mb-2 flex items-center justify-between">
-            <span>${job.company}</span>
+            <span class="flex items-center gap-1.5">
+              ${job.sourceType === 'HEADHUNTER' ? '<span title="猎头代发帖" class="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold">猎头帖</span>' : ''}
+              ${record.companyResolution?.actualCompany ? `<span title="已溯源真实企业" class="text-slate-700">${record.companyResolution.actualCompany}</span>` : job.company}
+            </span>
             <a href="${job.url}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 hover:underline text-[11px] font-semibold flex items-center gap-0.5">
               原始链接 ↗
             </a>
@@ -840,6 +1060,7 @@
             <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded text-xs">${job.salaryText || '>=15K'}</span>
             <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">${job.city}</span>
             <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">${job.platform}</span>
+            ${job.detailCaptured ? '<span class="px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded text-[10px] font-bold" title="已抓取详情页全量 JD">🔬 全量JD</span>' : ''}
           </div>
           <div class="text-[11px] text-slate-400 border-t border-slate-100 pt-2 flex items-center justify-between">
             <span>🕒 ${job.publishOrActiveTime || '近期在线'}</span>
@@ -914,9 +1135,78 @@
       document.getElementById('drawer-greeting').innerText = tailor?.greetingMessage || '您好！对贵司岗位非常感兴趣，期待沟通！';
       document.getElementById('drawer-resume').innerHTML = marked.parse(tailor?.markdownContent || '> 暂无生成的简历');
 
+      // 猎头帖真实企业溯源面板
+      renderResolutionPanel(record);
+
       const drawer = document.getElementById('job-drawer');
       drawer.style.display = 'flex';
       document.getElementById('drawer-backdrop').classList.remove('hidden');
+    }
+
+    // ============ 猎头帖真实企业溯源 ============
+    function renderResolutionPanel(record) {
+      const container = document.getElementById('resolution-panel');
+      if (!container) return;
+
+      const isHeadhunter = record.job.sourceType === 'HEADHUNTER';
+      if (!isHeadhunter) {
+        container.classList.add('hidden');
+        return;
+      }
+      container.classList.remove('hidden');
+
+      const res = record.companyResolution;
+      const bodyEl = document.getElementById('resolution-body');
+      if (res && res.method !== 'as_is') {
+        const methodBadge = res.method === 'official_match'
+          ? '<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">官方帖指纹匹配</span>'
+          : '<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-[10px] font-bold">AI 商业线索推断</span>';
+        bodyEl.innerHTML = `
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            ${methodBadge}
+            <span class="text-[11px] text-slate-400">置信度 ${res.confidence}%</span>
+          </div>
+          <div class="text-sm font-bold text-slate-800 mb-1.5">🏢 真实招聘企业：${res.actualCompany || '未知'}</div>
+          <div class="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-100">${res.explanation}</div>
+        `;
+      } else {
+        bodyEl.innerHTML = `
+          <div class="text-[11px] text-slate-500 leading-relaxed mb-2.5">
+            ${res ? res.explanation : '该帖为猎头代发，尚未溯源真实招聘企业。可点击下方按钮，AI 将从 JD 中的行业、规模、业务线索推断实际公司。'}
+          </div>
+          <button onclick="resolveCompany()" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-sm transition">
+            🔍 深度解析真实企业（消耗少量 AI）
+          </button>
+        `;
+      }
+    }
+
+    async function resolveCompany() {
+      if (!currentDrawerJob) return;
+      if (window.IS_DEMO) {
+        alert('💡【演示模式】企业溯源已隔离。登录管理员账号后可使用 AI 深度解析。');
+        return;
+      }
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerText = '⏳ AI 正在从 JD 线索溯源企业...';
+      try {
+        const res = await fetch(`/api/jobs/${currentDrawerJob.job.id}/resolve-company`, { method: 'POST' });
+        const data = await res.json();
+        if (data.code === 0) {
+          currentDrawerJob.companyResolution = data.resolution;
+          renderResolutionPanel(currentDrawerJob);
+          alert(data.message);
+        } else {
+          alert('解析失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        alert('请求异常: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🔍 深度解析真实企业（消耗少量 AI）';
+        renderResolutionPanel(currentDrawerJob);
+      }
     }
 
     function closeDrawer() {
@@ -948,13 +1238,21 @@
     async function handleDrawerAction(action) {
       if (!currentDrawerJob) return;
       try {
-        await fetch(`/api/jobs/${currentDrawerJob.job.id}/action`, {
+        const res = await fetch(`/api/jobs/${currentDrawerJob.job.id}/action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action })
         });
+        const data = await res.json();
+        if (window.IS_DEMO) {
+          // Demo 模式下更新本地内存状态
+          if (action === 'APPROVED') currentDrawerJob.status = 'APPROVED';
+          if (action === 'REJECTED') currentDrawerJob.status = 'REJECTED_BY_USER';
+          renderKanban(allJobs);
+          alert(data.message || '【演示模式】已模拟状态流转（刷新后重置）');
+        }
         closeDrawer();
-        loadJobs();
+        if (!window.IS_DEMO) loadJobs();
       } catch (e) {
         alert('操作失败: ' + e.message);
       }
@@ -962,6 +1260,10 @@
 
     // 触发单次极速扫描
     async function triggerScan() {
+      if (window.IS_DEMO) {
+        alert('💡【演示模式提示】当前为云端演示沙箱，外部扫描已隔离。\n真实求职时，可使用「一键书签采集器」在 Boss直聘/猎聘等网站一键同步！');
+        return;
+      }
       const btn = event.target;
       btn.innerText = '⏳ 正在扫描 Chrome...';
       try {
@@ -972,7 +1274,7 @@
       } catch (e) {
         alert('扫描失败: ' + e.message);
       } finally {
-        btn.innerText = '⚡ 立即同步 Chrome 招聘页';
+        btn.innerText = '⚡ 极速扫描';
       }
     }
 
@@ -985,10 +1287,19 @@
         document.getElementById('llm-api-key').value = data.apiKey || '';
         document.getElementById('llm-model').value = data.model || 'deepseek-chat';
         document.getElementById('llm-temperature').value = data.temperature ?? 0.3;
+
+        if (window.IS_DEMO) {
+          document.getElementById('llm-api-key').setAttribute('readonly', 'true');
+          document.getElementById('llm-api-key').placeholder = '•••••••• (演示模式已保护并隐藏真实密钥)';
+        }
       } catch (e) {}
     }
 
     async function saveLlmConfig() {
+      if (window.IS_DEMO) {
+        alert('🔒【安全防护】当前为演示预览模式，核心 LLM 配置已安全锁定，保护私密 API Key！');
+        return;
+      }
       const cfg = {
         baseUrl: document.getElementById('llm-base-url').value.trim(),
         apiKey: document.getElementById('llm-api-key').value.trim(),
@@ -1456,10 +1767,14 @@
     }
 
     async function saveProfileJson() {
+      if (window.IS_DEMO) {
+        alert('🔒【安全防护】当前为演示预览模式，履历档案已锁定，仅真实管理员可保存修改！');
+        return;
+      }
       try {
         const raw = document.getElementById('profile-json-editor').value;
         const parsed = JSON.parse(raw);
-        await fetch('/api/config/profile', {
+        await fetch('/api/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(parsed)

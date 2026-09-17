@@ -1,25 +1,49 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { JobPost, TrackedJobRecord, ApplicationStatus, FilterResult, TailoredResume } from '../../types/index.js';
+import { readJson, writeJson } from '../../storage/index.js';
 
 export class JobTracker {
-  private dbPath: string;
+  private dbKey: string;
   private records: Map<string, TrackedJobRecord> = new Map();
+  private ready: Promise<void>;
 
-  constructor(dbPath: string = path.resolve(process.cwd(), 'data/db/jobs_pipeline.json')) {
-    this.dbPath = dbPath;
-    this.load();
+  constructor(dbKey: string = 'data/db/jobs_pipeline.json') {
+    this.dbKey = dbKey;
+    this.ready = this.load();
+  }
+
+  /** 确保底层存储已加载完成（云端首次调用时等待） */
+  public async ensureReady(): Promise<void> {
+    await this.ready;
+  }
+
+  private async load(): Promise<void> {
+    const list = await readJson<TrackedJobRecord[]>(this.dbKey, []);
+    this.records = new Map(list.map(r => [r.job.id, r]));
   }
 
   /**
    * 生成职位唯一指纹哈希
+   * URL 做归一化（剔除 query 参数与 fragment、统一小写主机、去尾斜杠）：
+   * 同一岗位从列表页卡片抓取（可能带 ?lid=xxx 等追踪参数）与从详情页抓取，产出相同指纹，防止重复入库。
    */
   public generateFingerprint(company: string, title: string, platformIdOrUrl: string): string {
     const cleanCompany = company.trim().toLowerCase().replace(/[\(（].*?[\)）]/g, '');
     const cleanTitle = title.trim().toLowerCase().replace(/\s+/g, '');
-    const raw = `${cleanCompany}_${cleanTitle}_${platformIdOrUrl.trim()}`;
+    const cleanUrl = this.normalizeUrl(platformIdOrUrl);
+    const raw = `${cleanCompany}_${cleanTitle}_${cleanUrl}`;
     return crypto.createHash('md5').update(raw).digest('hex').substring(0, 16);
+  }
+
+  /** URL 归一化：剔除 ?query 与 #fragment，小写主机名，去尾部斜杠 */
+  private normalizeUrl(url: string): string {
+    try {
+      const u = new URL(url.trim());
+      return `${u.host.toLowerCase()}${u.pathname.replace(/\/+$/, '')}`;
+    } catch {
+      // 非 URL（平台 ID 等）按原样处理
+      return url.trim().replace(/[?#].*$/, '');
+    }
   }
 
   /**
@@ -77,7 +101,7 @@ export class JobTracker {
     };
 
     this.records.set(job.id, record);
-    this.save();
+    void this.save();
     return record;
   }
 
@@ -151,28 +175,9 @@ export class JobTracker {
     };
   }
 
-  private load(): void {
+  private async save(): Promise<void> {
     try {
-      if (fs.existsSync(this.dbPath)) {
-        const raw = fs.readFileSync(this.dbPath, 'utf-8');
-        const list: TrackedJobRecord[] = JSON.parse(raw);
-        for (const item of list) {
-          this.records.set(item.job.id, item);
-        }
-      }
-    } catch (e) {
-      console.error(`[JobTracker] 加载数据失败:`, e);
-    }
-  }
-
-  private save(): void {
-    try {
-      const dir = path.dirname(this.dbPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const list = Array.from(this.records.values());
-      fs.writeFileSync(this.dbPath, JSON.stringify(list, null, 2), 'utf-8');
+      await writeJson(this.dbKey, Array.from(this.records.values()));
     } catch (e) {
       console.error(`[JobTracker] 保存数据失败:`, e);
     }

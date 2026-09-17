@@ -10,13 +10,62 @@ export class JobFilter {
   private commutePlanner: CommutePlanner;
 
   constructor(rulesPath: string = path.resolve(process.cwd(), 'data/preferences/rules.json')) {
-    this.rules = JSON.parse(fs.readFileSync(rulesPath, 'utf-8'));
+    this.rules = this.loadRules(rulesPath);
     this.scheduleChecker = new ScheduleChecker();
     this.commutePlanner = new CommutePlanner();
   }
 
   public reloadRules(rulesPath: string = path.resolve(process.cwd(), 'data/preferences/rules.json')) {
-    this.rules = JSON.parse(fs.readFileSync(rulesPath, 'utf-8'));
+    this.rules = this.loadRules(rulesPath);
+  }
+
+  private loadRules(rulesPath: string): PreferenceRules {
+    try {
+      if (fs.existsSync(rulesPath)) {
+        return JSON.parse(fs.readFileSync(rulesPath, 'utf-8'));
+      }
+      const examplePath = path.resolve(process.cwd(), 'data/preferences/rules.example.json');
+      if (fs.existsSync(examplePath)) {
+        return JSON.parse(fs.readFileSync(examplePath, 'utf-8'));
+      }
+    } catch (e) {}
+
+    return {
+      strictRules: {
+        mustDoubleWeekend: true,
+        disallowedWorkSchedules: ['单休', '大小周', '做六休一'],
+        maxStaleMonths: 3,
+        excludeKeywords: ['驻场', '外包'],
+        excludeCompanies: []
+      },
+      scenarios: {
+        remote: {
+          enabled: true,
+          name: '远程优先',
+          targetRoles: ['全栈', '架构师'],
+          preferredLocations: ['全国远程'],
+          salaryRange: { min: 25000, max: 60000, currency: 'CNY' },
+          workMode: 'REMOTE'
+        },
+        onsite: {
+          enabled: true,
+          name: '本地现场',
+          targetCities: ['上海'],
+          targetRoles: ['全栈', '架构师'],
+          salaryRange: { min: 25000, max: 60000, currency: 'CNY' },
+          workMode: 'ONSITE'
+        }
+      },
+      scoringThresholds: {
+        minScoreToNotify: 80,
+        weights: {
+          skillMatch: 40,
+          experienceMatch: 30,
+          scheduleAndBenefits: 20,
+          growthAndDomain: 10
+        }
+      }
+    };
   }
 
   /**

@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/auth/(.*)", "destination": "/api" },
+    { "source": "/healthz", "destination": "/api" },
+    { "source": "/demo", "destination": "/index.html" }
+  ]
+}
