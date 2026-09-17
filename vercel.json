@@ -3,9 +3,17 @@
   "buildCommand": "npm run build",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/entry" },
-    { "source": "/auth/(.*)", "destination": "/api/entry" },
-    { "source": "/healthz", "destination": "/api/entry" },
-    { "source": "/demo", "destination": "/index.html" }
+    {
+      "source": "/auth/(.*)",
+      "destination": "/api/auth/$1"
+    },
+    {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/demo",
+      "destination": "/index.html"
+    }
   ]
 }
