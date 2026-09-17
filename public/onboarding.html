@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job-Hunter OS ｜ 3分钟快速初始化向导 (Onboarding)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {50:'#fbfaf9',100:'#f1f1ef',200:'#e9e9e7',300:'#dfddda',400:'#b9b8b6',500:'#9b9a97',600:'#787774',700:'#5f5e5b',800:'#37352f',900:'#2f2c28'},
+            indigo: {50:'#e9f3fc',100:'#d3e7fa',200:'#a8cdf5',300:'#6eaeeb',400:'#3b8fe6',500:'#2383e2',600:'#1b6ec2',700:'#1858b0',800:'#174a8f',900:'#173f75'},
+            emerald: {50:'#e7f3f0',100:'#cfe7e2',200:'#9fcfc5',300:'#6fb5a7',400:'#478f82',500:'#0f7b6c',600:'#0d6a5d',700:'#0b584c',800:'#094640',900:'#083833'},
+            amber: {50:'#fbf3e8',100:'#f6e7d2',200:'#eed9b5',300:'#e3bd85',400:'#d99a4a',500:'#d9730d',600:'#c35d05',700:'#a34a05',800:'#833d07',900:'#6b3308'}
+          },
+          boxShadow: { sm:'0 1px 2px rgba(15,15,15,0.05)', DEFAULT:'0 1px 3px rgba(15,15,15,0.07)', md:'0 2px 6px rgba(15,15,15,0.08)' }
+        }
+      }
+    };
+  </script>
+  <style>
+    .bg-gradient-to-r, .bg-gradient-to-br, .bg-gradient-to-l { background-image: none !important; }
+    body { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    button, a.button { white-space: nowrap; }
+  </style>
+
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
