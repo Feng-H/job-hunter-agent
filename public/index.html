@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job-Hunter OS · 智能求职工作台</title>
   <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <!-- Notion 风格配色：重映射 Tailwind 调色板为 Notion 暖灰体系 -->
   <script>
     tailwind.config = {
@@ -48,6 +48,17 @@
   <!-- Markdown 渲染器 -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    .prose { color: #37352f; }
+    .prose h1, .prose h2, .prose h3 { color: #37352f; }
+    #profile-chat-messages .prose { font-size: 12px; }
+    #profile-chat-messages .prose h1 { font-size: 15px; margin: 0.5em 0 0.3em; }
+    #profile-chat-messages .prose h2 { font-size: 14px; margin: 0.5em 0 0.3em; }
+    #profile-chat-messages .prose h3 { font-size: 13px; margin: 0.5em 0 0.3em; }
+    #profile-chat-messages .prose p { margin: 0.35em 0; }
+    #profile-chat-messages .prose ul, #profile-chat-messages .prose ol { margin: 0.35em 0; padding-left: 1.2em; }
+    #profile-chat-messages .prose li { margin: 0.15em 0; }
+    #profile-chat-messages .prose pre { font-size: 11px; margin: 0.4em 0; }
+    #drawer-resume.prose { font-size: 12px; }
     body { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
     .kanban-col { min-height: calc(100vh - 160px); }
     .drawer-open { transform: translateX(0); }
@@ -541,7 +552,7 @@
           <!-- 可视化内容区 -->
           <div id="profile-visual-container" class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
             <!-- 基础资料卡 -->
-            <div class="flex items-start justify-between bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-xl shadow-sm">
+            <div class="flex items-start justify-between bg-slate-800 text-white p-6 rounded-lg shadow-sm">
               <div>
                 <h1 id="pv-name" class="text-2xl font-black tracking-tight">候选人</h1>
                 <p id="pv-title" class="text-indigo-300 text-sm font-semibold mt-1">加载中...</p>
