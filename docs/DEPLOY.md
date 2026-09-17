@@ -12,7 +12,7 @@
                 │    /  /demo        → index.html（双模式看板）
                 │    /login          → 登录/初始化
                 │    /setup /onboarding
-                └─ Serverless 函数（api/[...path].ts）
+                └─ Serverless 函数（api/[...path].js · 预构建 CJS 产物）
                      /api/*  /auth/*  /healthz → CollectorServer.handle()
                      ├─ 认证门：Demo 沙箱 ⇆ Admin 真实管道
                      ├─ 存储：Vercel KV (Upstash REST)
@@ -61,6 +61,8 @@ git push origin main
 2. 创建后连接到本项目，Vercel 自动注入 `KV_REST_API_URL` 与 `KV_REST_API_TOKEN` 环境变量；
 3. 存储适配层（`src/storage/index.ts`）检测到这两个变量即自动启用云端读写，无需改代码。
 
+> 💡 Upstash 经 Vercel Market 注入的变量可能**带前缀**（如 `a_KV_REST_API_URL` / `a_KV_REST_API_TOKEN`），属正常现象——存储层会自动扫描任意前缀的 `KV_REST_API_*` / `UPSTASH_REDIS_REST_*` 变量对，无需手动改名。
+
 ### 4. 配置环境变量
 
 **Settings → Environment Variables** 添加：
@@ -72,12 +74,14 @@ git push origin main
 | `LLM_MODEL` | 必填 | 如 `deepseek-chat` |
 | `FEISHU_WEBHOOK_URL` | 可选 | 飞书审批卡片推送 |
 
+> 📌 **LLM 配置优先级**：环境变量是启动默认值；之后在 `/onboarding` 中保存的 LLM 配置（存于 KV）优先生效，若其中 API Key 留空则自动回填环境变量。两处任选其一即可，均已实测可用。
+
 ### 5. 部署后自检清单
 
 - [ ] 打开 `https://<域名>.vercel.app` → 应看到 **Demo 演示模式**（琥珀色横幅 + 示例数据 + 管理员登录按钮）；
 - [ ] 打开 `/login` → 首次进入创建管理员账号（scrypt 加盐，仅允许创建一次）；
 - [ ] 登录后进入真实工作台，完成 `/onboarding` 初始化（LLM 配置、简历粘贴、红线设定）；
-- [ ] Chrome 扩展 popup 填入 Vercel 域名 + `/setup` 页复制的采集令牌 → 「测试连通性」应返回健康；
+- [ ] Chrome 扩展 popup 填入 Vercel 域名 + `/setup` 页复制的采集令牌 → 「测试连通性」应返回健康（扩展可直接在 `/setup` 页下载 `extension.zip` 解压载入，无需克隆仓库）；
 - [ ] 逛 Boss直聘/猎聘，扩展应自动同步新岗位并在看板出现。
 
 ---
@@ -114,3 +118,16 @@ cp .env.example .env        # 填入 LLM/飞书配置
 | 扩展提示无法连接 | popup 中服务地址需完整域名（`https://xxx.vercel.app`，不带末尾斜杠）；检查 `/healthz` |
 | LLM 功能无响应 | 检查环境变量三个 `LLM_*` 是否都已配置并 Redeploy；确认配额未触发每日上限 |
 | 静态页 404 | 确认 `vercel.json` 未被改动（依赖 `cleanUrls` 与 `/api` 重写） |
+| FUNCTION_INVOCATION_FAILED / Invalid export | 确认 `package.json` **没有** `start` 脚本；确认 `api/[...path].js` 已提交且为最新构建（改过服务端代码必须重跑 `npm run build` 再 push） |
+| KV 环境变量带前缀（如 `a_KV_REST_API_URL`）| 正常现象，存储层自动扫描任意前缀的变量对；也可登录后访问 `/api/diag/storage` 验证 KV 读写探测 |
+
+---
+
+## 六、Serverless 构建产物说明（改服务端代码必读）
+
+- API 函数**不是运行时编译**：`src/api-entry.ts` 由 `scripts/build-api.mjs`（esbuild）预构建为 CommonJS 产物 **`api/[...path].js` 并随仓库提交**，Vercel 直接使用该产物；
+- 因此任何涉及 `src/api-entry.ts` 或 `src/modules/server/` 的改动，**推送前必须执行 `npm run build`** 重新生成 bundle（该命令内含 tsc 类型校验）；
+- `package.json` 有意**不设置 `start` 脚本、`main` 与 `type` 字段**：Vercel 一旦将项目识别为 Node 应用，会劫持全部 `/api/*` 路由并导致 `FUNCTION_INVOCATION_FAILED`（Invalid export），请勿补回；
+- playwright / Pi Agent 等重依赖通过变量动态导入排除在 bundle 之外，云端按需降级（JXA 扫描→扩展采集、Pi 会话树→LlmClient），Vercel 无需安装任何二进制。
+
+**诊断端点**：管理员登录后访问 `/api/diag/storage`，可查看存储类型、KV 读写探测结果、检测到的（带前缀）KV 环境变量与 LLM 生效配置概览；未登录访客仅见布尔概览，不含任何密钥值。

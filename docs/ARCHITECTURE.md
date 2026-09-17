@@ -51,7 +51,7 @@
 | **严格规则初筛流** | `src/modules/filter/JobFilter.ts` | 双休一票否决、岗位时效（默认 3 个月）、薪资底线、黑名单关键词/公司过滤，规则缺失时内置安全兜底 |
 | **求职状态机** | `src/modules/tracker/JobTracker.ts` | MD5 指纹防重（**URL 归一化**：剔除 query/fragment，列表页与详情页同岗位同指纹）、30 天公司冷却期、全生命周期流转 |
 | 飞书卡片分发 | `src/modules/feishu/FeishuClient.ts` | 审批卡片构建与 Webhook 推送，手机端一键同意/拒绝 |
-| Vercel Serverless 入口 | `api/[...path].ts` + `vercel.json` | 单函数承载全部 API，`cleanUrls` 静态分发页面，`/api/*`、`/auth/*` 重写进入函数 |
+| Vercel Serverless 入口 | `src/api-entry.ts` →（esbuild 预构建提交产物）`api/[...path].js` + `vercel.json` | 单函数承载全部 API，`cleanUrls` 静态分发页面，`/api/*`、`/auth/*` 重写进入函数；预构建 CJS 产物既避免平台误识别为 Node 应用（会劫持 `/api/*` 导致 Invalid export），又保证重依赖按需动态加载 |
 
 ### 🤖 Agent 智能体模块（认知与推理）
 
@@ -67,7 +67,7 @@
 
 | 存储 | 路径/键 | 说明 |
 |---|---|---|
-| **统一存储适配层** | `src/storage/index.ts` | 自动切换：本地读写 `data/**/*.json`；检测到 `KV_REST_API_URL`+`KV_REST_API_TOKEN` 时无缝切换 Vercel KV（Upstash REST）。键名与本地相对路径一致，零迁移成本 |
+| **统一存储适配层** | `src/storage/index.ts` | 自动切换：本地读写 `data/**/*.json`；检测到 `KV_REST_API_URL`+`KV_REST_API_TOKEN`（含任意前缀形态，如 Upstash 注入的 `a_KV_REST_API_URL`）时无缝切换 Vercel KV（Upstash REST）。键名与本地相对路径一致，零迁移成本 |
 | 全量主履历库 | `data/profile/master_profile.json` | 候选人唯一事实源（Ground Truth），所有 Agent 生成严格依从 |
 | 求职红线配置 | `data/preferences/rules.json` | 目标城市、通勤上限、薪资底线、黑名单等全参数动态配置 |
 | 岗位管道数据库 | `data/db/jobs_pipeline.json` | 状态机全量记录（含初筛结果、定制简历快照、猎头帖溯源结果） |
@@ -107,6 +107,6 @@ Chrome 扩展（真人浏览：列表批量 / 详情深抓 / 本地指纹去重�
 ## 🛡️ 安全设计要点
 
 1. **零封号承诺**：采集层 100% 真人浏览 DOM 只读（扩展自动同步亦不产生异常流量）；云端绝不向招聘平台发起脚本探测；熔断器在检测到风控特征时主动休眠。
-2. **双模式物理隔离**：Demo 访客与真实数据、私有 LLM 密钥彻底隔离——配置接口返回掩码、写操作 403、AI 接口走本地 Mock 沙箱（0 外部调用、0 计费）；仅管理员会话可触发真实 LLM。
+2. **双模式物理隔离**：Demo 访客与真实数据、私有 LLM 密钥彻底隔离——配置接口返回掩码、写操作 403、AI 接口走本地 Mock 沙箱（0 外部调用、0 计费）；仅管理员会话可触发真实 LLM。运维诊断端点 `/api/diag/storage` 受同一门控（访客仅见布尔概览，不含密钥值）。
 3. **隐私隔离**：`.gitignore` 物理隔离真实履历、API Key、飞书密钥、系统状态与账号数据；仓库仅保留脱敏 `*.example.json` 模板。
 4. **事实依从**：所有 LLM 生成均以主档案为唯一事实源，Prompt 内置最高防幻觉红线，严禁杜撰经历或企业名。

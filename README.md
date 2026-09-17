@@ -10,7 +10,7 @@
 * **自动同步**：正常浏览 Boss直聘/猎聘/智联时自动采集——列表页批量快筛（卡片自带公司名，无需进详情页），详情页自动深抓全量 JD 送 AI 分析；
 * **三层防重复**：客户端 URL 归一指纹去重（重复岗位零请求）+ 服务端 MD5 指纹兜底（同一岗位从列表/详情/多次刷到均不重复入库）；
 * **猎头帖识别**：自动标记猎头代发帖（含"某知名企业"类代称），入库即做免费官方帖指纹匹配；
-* 安装指引见 `extension/README.md` 或部署后的 `/setup` 页。
+* 安装指引见 `extension/README.md` 或部署后的 `/setup` 页——云端用户可直接在 `/setup` 下载 `extension.zip` 解压载入，**无需克隆仓库**。
 
 ### 2. 🕵️ 猎头帖真实企业溯源（CompanyResolver）
 * **策略一（免费自动）**：职位指纹（标准化职位名 + 薪资分档 + 主城区）与看板内企业官方直发帖碰撞匹配，JD 要求重合度二次验证；
@@ -61,7 +61,7 @@ git push origin main   # 然后在 vercel.com 导入仓库即可
 
 1. **导入项目**：Vercel → Add New Project，框架选 Other（`vercel.json` 已配好一切）；
 2. **创建 KV（必做）**：项目 → Storage → Create Database → KV (Upstash) 并连接（无 KV 数据无法持久化）；
-3. **环境变量**：`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`（可选 `FEISHU_WEBHOOK_URL`）；
+3. **环境变量**：`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`（可选 `FEISHU_WEBHOOK_URL`）；也可登录后在 `/onboarding` 中配置——两处任选其一，`/onboarding` 配置优先，API Key 留空时自动回退环境变量；
 4. **完成**：访客打开域名看 Demo，你访问 `/login` 创建管理员进入真实工作台。
 
 完整指南（含能力矩阵、自检清单、常见问题）：👉 **[docs/DEPLOY.md](./docs/DEPLOY.md)**
