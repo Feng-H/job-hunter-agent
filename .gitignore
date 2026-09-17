@@ -1,0 +1,36 @@
+# 依赖与编译产物
+node_modules/
+dist/
+
+# 本地环境变量与密钥配置
+.env
+.env.local
+.env.*.local
+data/preferences/llm_config.json
+
+# 个人敏感信息与真实履历（仅保留 *.example.json 模板在代码库中）
+data/profile/master_profile.json
+data/preferences/rules.json
+data/db/*.json
+data/memory/*.json
+data/memory/copilot_sessions/
+data/resumes_tailored/
+*.pdf
+*简历*
+
+# 本地日志与运行状态
+logs/
+*.log
+.pi/
+
+
+# 临时测试排查脚本
+check-tabs.ts
+test-cdp.ts
+diagnose.ts
+
+# 操作系统与编辑器配置
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

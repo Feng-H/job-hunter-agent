@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Job-Hunter 一键书签助手配置</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F3F4F6; padding: 40px; display: flex; justify-content: center; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 680px; width: 100%; padding: 32px; }
+    h1 { font-size: 24px; color: #111827; margin-bottom: 8px; }
+    p { color: #4B5563; font-size: 15px; line-height: 1.6; }
+    .btn-bookmark { display: inline-block; background: #2563EB; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin: 20px 0; cursor: move; box-shadow: 0 4px 10px rgba(37,99,235,0.25); }
+    .btn-bookmark:hover { background: #1D4ED8; }
+    .step { background: #F9FAFB; border-left: 4px solid #2563EB; padding: 14px 18px; margin: 12px 0; border-radius: 0 8px 8px 0; }
+    .code-box { background: #1E293B; color: #E2E8F0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto; word-break: break-all; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎯 求职助手 · 一键书签采集工具</h1>
+    <p>通过这个工具，你在自己日常的 Chrome 里正常搜索职位，<b>点一下书签栏</b>，职位瞬间送达 Agent 并自动完成：<br>
+    <b>3个月时效审查 ➔ 周末严格双休排查 ➔ 严苛通勤规划 ➔ 针对性简历与话术裁剪 ➔ 推送飞书！</b></p>
+
+    <h3>👉 快速安装（只需 3 秒）：</h3>
+    <div class="step">
+      <b>方法 1（最简单）：</b> 把下面这个蓝色按钮，直接<b>用鼠标拖拽到你 Chrome 浏览器的【书签栏】</b>：<br>
+      <a class="btn-bookmark" href="javascript:(function(){const s=document.createElement('script');s.src='http://127.0.0.1:8765/bookmarklet.js?t='+Date.now();document.body.appendChild(s);})();">📌 投递到 Job-Hunter</a>
+    </div>
+
+    <div class="step">
+      <b>方法 2（手动添加）：</b> 在 Chrome 书签栏右键 ➔「添加网页」➔ 名称输入 <code>📌 投递到 Job-Hunter</code> ➔ 网址粘贴下面这行：
+      <div class="code-box">javascript:(function(){const s=document.createElement('script');s.src='http://127.0.0.1:8765/bookmarklet.js?t='+Date.now();document.body.appendChild(s);})();</div>
+    </div>
+
+    <h3>💡 使用方法：</h3>
+    <p>1. 在平时正常的 Chrome 里打开 <b>Boss直聘 / 猎聘 / 智联</b>，搜索如「智能制造 数字化」或「AI产品经理」；<br>
+    2. 看到搜索出来的岗位列表时，在书签栏点一下 <b>📌 投递到 Job-Hunter</b>；<br>
+    3. 网页右上角会弹出采集成功提示，打开你的<b>手机飞书</b>即可收到精心筛选的推荐卡片！</p>
+  </div>
+</body>
+</html>

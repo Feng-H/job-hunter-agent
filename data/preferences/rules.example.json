@@ -1,0 +1,93 @@
+{
+  "strictRules": {
+    "mustDoubleWeekend": true,
+    "disallowedWorkSchedules": [
+      "单休",
+      "大小周",
+      "轮休",
+      "单双休",
+      "月休4天",
+      "月休四天",
+      "抗压能力强",
+      "接受高强度加班",
+      "需要加班",
+      "做六休一"
+    ],
+    "excludeKeywords": [
+      "驻场",
+      "驻厂",
+      "常驻客户现场",
+      "长期出差",
+      "外派异地",
+      "电话销售",
+      "保险销售",
+      "纯销售"
+    ],
+    "allowedCompanyTypes": [
+      "自研",
+      "外包",
+      "劳务派遣",
+      "国企",
+      "外企",
+      "民企"
+    ],
+    "excludeCompanies": []
+  },
+  "scenarios": {
+    "remote": {
+      "enabled": true,
+      "name": "远程办公 / 全球及国内远程",
+      "targetRoles": [
+        "全栈开发工程师",
+        "后端架构师",
+        "AI应用工程师",
+        "技术产品经理"
+      ],
+      "preferredLocations": [
+        "远程",
+        "居家办公",
+        "Remote",
+        "Anywhere",
+        "全球远程"
+      ],
+      "salaryRange": {
+        "min": 15000,
+        "max": 50000,
+        "currency": "CNY",
+        "allowUsd": true,
+        "minUsd": 2200
+      },
+      "workMode": "REMOTE"
+    },
+    "onsite": {
+      "enabled": true,
+      "name": "本地线下办公",
+      "homeBase": "望京地铁站",
+      "maxCommuteMinutes": 60,
+      "preferredCommute": "地铁或公交单程 <= 1小时",
+      "targetCities": [
+        "北京"
+      ],
+      "targetRoles": [
+        "全栈开发工程师",
+        "资深后端开发",
+        "系统架构师"
+      ],
+      "salaryRange": {
+        "min": 18000,
+        "max": 45000,
+        "currency": "CNY"
+      },
+      "workMode": "ONSITE"
+    }
+  },
+  "scoringThresholds": {
+    "minScoreToNotify": 80,
+    "weights": {
+      "skillMatch": 0.4,
+      "experienceMatch": 0.3,
+      "scheduleAndBenefits": 0.2,
+      "growthAndDomain": 0.1
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "job-hunter-agent",
+  "version": "1.0.0",
+  "description": "Intelligent Job Hunter Agent powered by Pi & Feishu",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "scan": "tsx scripts/scan-mac.ts",
+    "dev": "tsx src/server.ts",
+    "server": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [
+    "job-hunter",
+    "agent",
+    "pi",
+    "feishu"
+  ],
+  "author": "Job-Hunter OS Contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^22.20.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "file:../pi-carryover/node_modules/@earendil-works/pi-coding-agent",
+    "dotenv": "^17.4.2",
+    "playwright-core": "^1.63.0"
+  }
+}

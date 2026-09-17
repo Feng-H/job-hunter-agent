@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job-Hunter OS · 智能求职工作台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Markdown 渲染器 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .kanban-col { min-height: calc(100vh - 160px); }
+    .drawer-open { transform: translateX(0); }
+    .drawer-close { transform: translateX(100%); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 flex flex-col h-screen overflow-hidden">
+
+  <!-- 顶部导航栏 -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm flex-shrink-0">
+    <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-lg">🎯</div>
+        <div>
+          <div class="font-bold text-base text-slate-800 tracking-tight flex items-center gap-2">
+            Job-Hunter OS
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1"></span>系统在线
+            </span>
+          </div>
+          <div class="text-xs text-slate-400">基于 Pi Agent 底座 · 智能风控防封 · 严苛规则初筛 · 动态履历定制</div>
+        </div>
+      </div>
+
+      <!-- 导航选项卡 -->
+      <nav class="flex space-x-1 border-l border-slate-200 pl-6">
+        <button id="nav-kanban" onclick="switchView('kanban')" class="px-3.5 py-1.5 rounded-md text-sm font-medium bg-indigo-50 text-indigo-700 transition">
+          📊 求职流转看板
+        </button>
+        <button id="nav-settings" onclick="switchView('settings')" class="px-3.5 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          ⚙️ 模型与系统设置
+        </button>
+        <button id="nav-profile" onclick="switchView('profile')" class="px-3.5 py-1.5 rounded-md text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+          👤 全量档案库
+        </button>
+      </nav>
+    </div>
+
+    <!-- 右侧动作 -->
+    <div class="flex items-center space-x-3">
+      <button onclick="triggerScan()" class="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+        ⚡ 立即同步 Chrome 招聘页
+      </button>
+      <button onclick="loadJobs()" title="刷新看板" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+        🔄
+      </button>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="flex-1 overflow-hidden relative">
+
+    <!-- 视图 1：求职看板 -->
+    <div id="view-kanban" class="h-full overflow-x-auto p-6 flex space-x-5 custom-scrollbar">
+      <!-- 待飞书审批 -->
+      <div id="col-box-pending" class="w-80 flex-shrink-0 flex flex-col bg-slate-100 rounded-xl p-3 border border-slate-200 transition-all duration-200">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
+          <div class="font-bold text-sm text-slate-700 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 待飞书审批
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="count-pending" class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">0</span>
+            <button onclick="toggleColumn('pending')" title="收起/展开该列" class="text-slate-400 hover:text-slate-700 text-xs px-1">◀</button>
+          </div>
+        </div>
+        <div id="col-pending" class="space-y-3 overflow-y-auto flex-1 custom-scrollbar pr-1"></div>
+      </div>
+
+      <!-- 已批准 -->
+      <div id="col-box-approved" class="w-80 flex-shrink-0 flex flex-col bg-slate-100 rounded-xl p-3 border border-slate-200 transition-all duration-200">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
+          <div class="font-bold text-sm text-slate-700 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> 已确认同意投递
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="count-approved" class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">0</span>
+            <button onclick="toggleColumn('approved')" title="收起/展开该列" class="text-slate-400 hover:text-slate-700 text-xs px-1">◀</button>
+          </div>
+        </div>
+        <div id="col-approved" class="space-y-3 overflow-y-auto flex-1 custom-scrollbar pr-1"></div>
+      </div>
+
+      <!-- 已投递/打招呼 -->
+      <div id="col-box-applied" class="w-80 flex-shrink-0 flex flex-col bg-slate-100 rounded-xl p-3 border border-slate-200 transition-all duration-200">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
+          <div class="font-bold text-sm text-slate-700 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 已执行投递 / 沟通中
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="count-applied" class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">0</span>
+            <button onclick="toggleColumn('applied')" title="收起/展开该列" class="text-slate-400 hover:text-slate-700 text-xs px-1">◀</button>
+          </div>
+        </div>
+        <div id="col-applied" class="space-y-3 overflow-y-auto flex-1 custom-scrollbar pr-1"></div>
+      </div>
+
+      <!-- 规则初筛排除 (未达标/外地/非双休) -->
+      <div id="col-box-rejected" class="w-80 flex-shrink-0 flex flex-col bg-slate-100 rounded-xl p-3 border border-slate-200 transition-all duration-200">
+        <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
+          <div class="font-bold text-sm text-slate-700 flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> 🚫 规则初筛排除 (未达标)
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="count-rejected" class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full text-xs font-bold">0</span>
+            <button onclick="toggleColumn('rejected')" title="收起/展开该列" class="text-slate-400 hover:text-slate-700 text-xs px-1">◀</button>
+          </div>
+        </div>
+        <div id="col-rejected" class="space-y-3 overflow-y-auto flex-1 custom-scrollbar pr-1 opacity-75"></div>
+      </div>
+    </div>
+
+    <!-- 视图 2：模型与系统设置 -->
+    <div id="view-settings" class="h-full overflow-y-auto p-8 max-w-4xl mx-auto hidden custom-scrollbar">
+      <div class="space-y-8">
+        <!-- 账号安全与防风控盾牌 (核心安全中枢) -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                🛡️ 账号安全与防风控盾牌
+                <span id="safety-status-badge" class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  安全护航中
+                </span>
+              </h2>
+              <p class="text-sm text-slate-500">基于三大招聘平台风控逆向研发。实行：纯只读非侵入、每日单平台限额20个、3.5~7.5秒拟人随机抖动延迟、遇到验证码自动熔断休眠。</p>
+            </div>
+            <button onclick="resetSafetyBreaker()" class="px-3.5 py-1.5 border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition">
+              🔄 复位风控熔断
+            </button>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 pt-2">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-400 block mb-1">今日配额消耗 (防高频封号)</span>
+              <span id="safety-quota-text" class="text-xs font-bold text-slate-700 font-mono">BOSS: 0/20 ｜ 猎聘: 0/20</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-400 block mb-1">行为特征保护</span>
+              <span class="text-xs font-bold text-emerald-600">纯只读模式 · 绝不自动跳转</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-400 block mb-1">主动熔断保护 (Circuit Breaker)</span>
+              <span id="safety-breaker-text" class="text-xs font-bold text-slate-700">未触发（安全）</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LLM 配置中心 -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+            🧠 大模型（LLM）底座配置
+          </h2>
+          <p class="text-sm text-slate-500 mb-6">配置您的 AI 大脑，用于 JD 深度语义风险排查、针对性简历重写与打招呼生成。兼容 DeepSeek、通义千问、Claude、OpenAI 等标准接口。</p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">API Base URL (接口地址)</label>
+              <input id="llm-base-url" type="text" placeholder="https://api.deepseek.com/v1" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">API Key (密钥)</label>
+              <input id="llm-api-key" type="password" placeholder="sk-..." class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Model Name (模型名称)</label>
+                <input id="llm-model" type="text" placeholder="deepseek-chat" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Temperature (多样性)</label>
+                <input id="llm-temperature" type="number" step="0.1" min="0" max="1" value="0.3" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="pt-3 flex items-center justify-between border-t border-slate-100">
+              <button onclick="testLlmConnection()" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+                🔌 测试连通性
+              </button>
+              <button onclick="saveLlmConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                💾 保存模型配置
+              </button>
+            </div>
+            <div id="llm-test-result" class="text-xs font-medium mt-2 hidden"></div>
+          </div>
+        </div>
+
+        <!-- 飞书通知与交互配置 -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+            🔔 飞书通知与双向交互配置
+          </h2>
+          <p class="text-sm text-slate-500 mb-6">配置飞书机器人，用于在手机上实时接收高匹配职位卡片，并直接在飞书上审批或投递。</p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">飞书自定义机器人 Webhook 地址</label>
+              <input id="feishu-webhook-url" type="text" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">飞书 App ID (自建应用，可选)</label>
+                <input id="feishu-app-id" type="text" placeholder="cli_..." class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">飞书 App Secret (可选)</label>
+                <input id="feishu-app-secret" type="password" placeholder="密钥" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="pt-3 flex items-center justify-between border-t border-slate-100">
+              <button onclick="testFeishuNotification()" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+                🔔 发送测试卡片到飞书
+              </button>
+              <button onclick="saveFeishuConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                💾 保存飞书配置
+              </button>
+            </div>
+            <div id="feishu-test-result" class="text-xs font-medium mt-2 hidden"></div>
+          </div>
+        </div>
+
+        <!-- 求职规则与红线控制台 -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+            🛡️ 偏好与硬性红线控制台
+          </h2>
+          <p class="text-sm text-slate-500 mb-6">修改系统自动过滤红线，修改后实时对后续抓取生效。</p>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">线下目标城市（逗号分隔）</label>
+                <input id="pref-target-cities" type="text" placeholder="如：长沙" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">常住地址 / 通勤起点</label>
+                <input id="pref-home-base" type="text" placeholder="如：长沙地铁3号线松雅湖南站 或 望京地铁站" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">期望月薪底线 (元)</label>
+                <input id="pref-salary-min" type="number" step="1000" value="15000" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">线下单程通勤上限 (分钟)</label>
+                <input id="pref-commute-max" type="number" step="10" value="90" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              </div>
+            </div>
+            <div class="flex items-center space-x-3 pt-2">
+              <input id="pref-double-weekend" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+              <label for="pref-double-weekend" class="text-sm font-medium text-slate-800">严格周末双休（单休、大小周、轮休一票否决）</label>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">硬性排除类型关键词（命中直接淘汰，逗号分隔）</label>
+              <input id="pref-exclude-kw" type="text" value="驻场, 驻厂, 常驻客户现场, 外派异地, 纯销售" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-1">排除公司黑名单（逗号分隔，命中直接跳过）</label>
+              <input id="pref-exclude-companies" type="text" placeholder="如：某某公司, 某某外包" class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="pt-3 flex justify-end border-t border-slate-100">
+              <button onclick="savePreferences()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                💾 保存偏好规则
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 视图 3：全量主档案库（双栏设计：左侧可视化呈现 + 右侧 AI 履历精修对话框） -->
+    <div id="view-profile" class="h-full overflow-hidden p-6 hidden">
+      <div class="h-full flex space-x-6">
+        
+        <!-- 左侧：可视化档案卡片呈现 (65%) -->
+        <div class="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 px-6 border-b border-slate-200 bg-slate-50 flex items-center justify-between flex-shrink-0">
+            <div>
+              <h2 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                👤 全量个人履历库 (Master Profile)
+                <span class="text-xs font-normal px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">全量档案 · 动态呈现</span>
+              </h2>
+              <p class="text-xs text-slate-400">Agent 裁剪各岗位简历的知识底库，所有内容保真严谨。</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleProfileJsonView()" id="btn-toggle-json" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg shadow-sm transition">
+                { } 源码模式
+              </button>
+            </div>
+          </div>
+
+          <!-- 可视化内容区 -->
+          <div id="profile-visual-container" class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <!-- 基础资料卡 -->
+            <div class="flex items-start justify-between bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-xl shadow-sm">
+              <div>
+                <h1 id="pv-name" class="text-2xl font-black tracking-tight">候选人</h1>
+                <p id="pv-title" class="text-indigo-300 text-sm font-semibold mt-1">加载中...</p>
+                <div class="flex items-center gap-4 mt-3 text-xs text-slate-300">
+                  <span>📱 <span id="pv-phone">--</span></span>
+                  <span>✉️ <span id="pv-email">--</span></span>
+                  <span>📍 <span id="pv-location">--</span></span>
+                  <span>🎓 <span id="pv-edu">--</span></span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="inline-block px-3 py-1 bg-indigo-500/30 border border-indigo-400/30 rounded-lg text-xs font-bold text-indigo-200">
+                  双休优先 · 本地/远程
+                </span>
+              </div>
+            </div>
+
+            <!-- 核心优势 -->
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span>🌟 核心竞争力矩阵</span>
+              </h3>
+              <div id="pv-summary" class="space-y-2"></div>
+            </div>
+
+            <!-- 工作经历 -->
+            <div>
+              <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <span>💼 职业履历与标杆成果</span>
+              </h3>
+              <div id="pv-experiences" class="space-y-4"></div>
+            </div>
+
+            <!-- 专业技能与认证 -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">🤖 数字化与 AI 技能栈</h4>
+                <div id="pv-skills-ai" class="flex flex-wrap gap-1.5"></div>
+              </div>
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">🏭 精益与工业工程底蕴</h4>
+                <div id="pv-skills-mfg" class="flex flex-wrap gap-1.5"></div>
+              </div>
+            </div>
+
+            <!-- 权威认证 -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">🏆 官方专业资质认证</h4>
+              <div id="pv-certs" class="grid grid-cols-2 gap-3 text-xs"></div>
+            </div>
+          </div>
+
+          <!-- JSON 源码编辑区 (默认隐藏) -->
+          <div id="profile-raw-container" class="flex-1 overflow-hidden p-4 hidden flex flex-col">
+            <textarea id="profile-json-editor" class="flex-1 w-full font-mono text-xs p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar"></textarea>
+            <div class="pt-3 flex justify-end">
+              <button onclick="saveProfileJson()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition">
+                💾 保存 JSON 修改
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 右侧：AI 履历对话与协同打磨工作台 (35%) -->
+        <div class="w-[420px] flex-shrink-0 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- 头部 (以 Pi Coding Agent 为底座) -->
+          <div class="p-4 px-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm font-bold shadow-sm">🧠</div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-sm text-slate-800">AI 履历打磨助手</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                    Pi Agent 底座
+                  </span>
+                </div>
+                <p id="copilot-pi-status" class="text-[11px] text-slate-400">Pi 原生增量上下文与会话管理就绪</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="compactProfileChatContext()" title="调用 Pi 原生 Compaction 压缩历史，浓缩关键记忆并释放上下文空间" class="text-indigo-600 hover:text-indigo-800 text-xs px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition font-medium flex items-center gap-1">
+                <span>🗜️ 压缩记忆</span>
+              </button>
+              <button onclick="clearProfileChatHistory()" title="重置 Pi 会话并开启全新上下文" class="text-slate-400 hover:text-rose-600 text-xs px-2 py-1 hover:bg-rose-50 rounded transition">
+                🗑️ 新会话
+              </button>
+            </div>
+          </div>
+
+          <!-- 快捷建议 Chips -->
+          <div class="p-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center gap-1.5 flex-wrap text-xs">
+            <span class="text-indigo-400 text-[11px] font-bold">💡 建议探讨：</span>
+            <button onclick="sendQuickPrompt('我想补充某重点核心项目系统架构与关键交付指标细节')" class="px-2 py-1 bg-white hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-[11px] transition">
+              重点项目细节
+            </button>
+            <button onclick="sendQuickPrompt('帮我使用 STAR 原则挖掘上一段经历中的关键技术亮点与业务突破')" class="px-2 py-1 bg-white hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-[11px] transition">
+              STAR原则提炼
+            </button>
+            <button onclick="sendQuickPrompt('补充我在团队协作、组织提效与跨职能沟通方面的量化成果')" class="px-2 py-1 bg-white hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 text-[11px] transition">
+              团队协作成果
+            </button>
+          </div>
+
+          <!-- 对话消息列表 -->
+          <div id="profile-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/50 text-xs">
+            <div class="flex items-start space-x-2">
+              <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+              <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-700 leading-relaxed max-w-[85%]">
+                您好！我是以 Pi 为底座驱动的专属 AI 履历专家合伙人。<br><br>
+                我已经深度加载了您的个人全量经历库。您可以直接告诉我：<br>
+                • <b>“某段经历我想再深入细化一下量化数据”</b>；<br>
+                • <b>“补充一个新的项目或关键技术成果”</b>；<br>
+                • <b>“强调我的某项稀缺能力与业务壁垒”</b>。<br><br>
+                我会通过 STAR 原则帮您挖掘提炼，并<b>自动把梳理好的成果同步更新到左侧的全量档案库中</b>！您想先聊聊哪一部分？
+              </div>
+            </div>
+          </div>
+
+          <!-- 输入区 (自适应多行文本框，支持大段文字输入与快捷键) -->
+          <div class="p-3 border-t border-slate-200 bg-white flex-shrink-0">
+            <div class="flex flex-col space-y-2">
+              <textarea id="profile-chat-input" rows="3" oninput="autoExpandTextarea(this)" onkeydown="handleChatInputKeydown(event)" placeholder="在此输入你想补充或打磨的经历、战绩、技术细节...（支持大段文字粘贴，Enter 发送，Shift+Enter 换行）" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 custom-scrollbar resize-y min-h-[72px] max-h-[220px]"></textarea>
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] text-slate-400">💡 提示：按 <kbd class="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[10px]">Enter</kbd> 发送，<kbd class="px-1 py-0.5 bg-slate-100 border border-slate-200 rounded font-mono text-[10px]">Shift+Enter</kbd> 换行</span>
+                <button onclick="sendProfileChatMessage()" id="btn-send-profile-chat" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-sm transition flex-shrink-0 flex items-center gap-1">
+                  <span>🚀 发送探讨</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 背景遮罩层 (点击外部自动收起抽屉) -->
+    <div id="drawer-backdrop" onclick="closeDrawer()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden transition-opacity"></div>
+
+    <!-- 右侧滑出详情抽屉 (Drawer) -->
+    <div id="job-drawer" style="display: none;" class="fixed top-0 right-0 w-[520px] max-w-[90vw] h-full bg-white shadow-2xl border-l border-slate-200 z-50 flex flex-col">
+      <div class="p-4 px-6 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
+        <div class="flex items-center space-x-3">
+          <button onclick="closeDrawer()" title="收起详情 (ESC)" class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg shadow-sm transition">
+            <span>✕ 收起侧边栏</span>
+          </button>
+          <div>
+            <h3 id="drawer-title" class="font-bold text-sm text-slate-900 leading-snug truncate max-w-[240px]">岗位详情</h3>
+            <p id="drawer-subtitle" class="text-xs text-slate-500 truncate max-w-[240px]">公司 · 薪资</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="drawer-link" href="#" target="_blank" class="px-3 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg shadow-sm transition inline-flex items-center gap-1">
+            👉 直达原始 JD ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- 抽屉内容 -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <!-- 基础标签 -->
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <span class="text-slate-400 block mb-1">🚇 通勤路线规划 (<1.5h)</span>
+            <span id="drawer-commute" class="font-medium text-slate-800">--</span>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <span class="text-slate-400 block mb-1">🕒 更新时效与渠道</span>
+            <span id="drawer-source" class="font-medium text-slate-800">--</span>
+          </div>
+        </div>
+
+        <!-- 原始链接专属高亮栏 -->
+        <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between">
+          <div class="truncate mr-3">
+            <span class="text-[11px] font-bold text-indigo-900 block mb-0.5">🔗 原始招聘页面链接：</span>
+            <a id="drawer-link-text" href="#" target="_blank" class="text-xs text-indigo-600 hover:underline truncate block font-mono">--</a>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button onclick="copyJobUrl()" class="px-2.5 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-md shadow-sm transition">
+              复制链接
+            </button>
+            <a id="drawer-link-btn" href="#" target="_blank" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-md shadow-sm transition">
+              直接打开 ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- 匹配分析 -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📊 智能匹配与风险审查</h4>
+          <div id="drawer-reasons" class="bg-amber-50/60 border border-amber-200/80 rounded-lg p-3.5 text-xs text-amber-900 space-y-1"></div>
+        </div>
+
+        <!-- 推荐打招呼话术 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">💬 拟打招呼话术</h4>
+            <button onclick="copyGreeting()" class="text-xs text-indigo-600 hover:underline">一键复制</button>
+          </div>
+          <div id="drawer-greeting" class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-700 italic"></div>
+        </div>
+
+        <!-- 定制简历快照预览 -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📄 本岗位专属定制简历快照 (Markdown)</h4>
+          <div id="drawer-resume" class="prose prose-sm max-w-none bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs overflow-x-auto"></div>
+        </div>
+      </div>
+
+      <!-- 抽屉底部操作栏 -->
+      <div class="p-4 px-6 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button onclick="closeDrawer()" class="px-3 py-2 border border-slate-300 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-lg transition">
+            稍后处理 (收起)
+          </button>
+          <button id="btn-reject" onclick="handleDrawerAction('REJECTED_BY_USER')" class="px-4 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold rounded-lg transition">
+            ❌ 淘汰拒绝
+          </button>
+        </div>
+        <button id="btn-approve" onclick="handleDrawerAction('APPROVED')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+          ✅ 确认投递此岗位
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 前端核心控制逻辑 -->
+  <script>
+    let allJobs = [];
+    let currentDrawerJob = null;
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', () => {
+      loadJobs();
+      loadSafetyStatus();
+      loadLlmConfig();
+      loadFeishuConfig();
+      loadPreferences();
+      loadProfileJson();
+      loadProfileChatHistory();
+    });
+
+    // 视图切换
+    function switchView(viewName) {
+      ['kanban', 'settings', 'profile'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.add('hidden');
+        document.getElementById(`nav-${v}`).classList.remove('bg-indigo-50', 'text-indigo-700');
+        document.getElementById(`nav-${v}`).classList.add('text-slate-600');
+      });
+      document.getElementById(`view-${viewName}`).classList.remove('hidden');
+      document.getElementById(`nav-${viewName}`).classList.add('bg-indigo-50', 'text-indigo-700');
+      document.getElementById(`nav-${viewName}`).classList.remove('text-slate-600');
+    }
+
+    // 获取并渲染岗位看板
+    async function loadJobs() {
+      try {
+        const res = await fetch('/api/jobs');
+        const data = await res.json();
+        allJobs = data.jobs || [];
+        renderKanban(allJobs);
+      } catch (e) {
+        console.error('加载职位失败:', e);
+      }
+    }
+
+    function renderKanban(jobs) {
+      const cols = {
+        pending: document.getElementById('col-pending'),
+        approved: document.getElementById('col-approved'),
+        applied: document.getElementById('col-applied'),
+        rejected: document.getElementById('col-rejected')
+      };
+
+      Object.values(cols).forEach(c => c.innerHTML = '');
+
+      const counts = { pending: 0, approved: 0, applied: 0, rejected: 0 };
+
+      jobs.forEach(record => {
+        const job = record.job;
+        const card = document.createElement('div');
+        card.className = 'bg-white p-4 rounded-xl border border-slate-200/90 shadow-sm hover:shadow-md transition cursor-pointer';
+        card.onclick = () => openDrawer(record);
+
+        const score = record.filterResult?.score || 80;
+        const scoreColor = score >= 85 ? 'text-emerald-600 bg-emerald-50' : 'text-indigo-600 bg-indigo-50';
+
+        let footerExtra = '';
+        if (record.status === 'FILTERED_OUT') {
+          const reasonText = (record.filterResult?.reasons || ['契合度未达标'])[0];
+          footerExtra = `
+            <div class="mt-2 pt-1.5 border-t border-rose-100 text-[11px] text-rose-500 font-medium">
+              🚫 初筛排除：${reasonText}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2 mb-1.5">
+            <h4 class="font-bold text-sm text-slate-900 leading-snug line-clamp-2 hover:text-indigo-600 transition">${job.title}</h4>
+            <span class="px-1.5 py-0.5 rounded text-xs font-bold ${scoreColor}">${score}分</span>
+          </div>
+          <div class="text-xs text-slate-500 font-medium mb-2 flex items-center justify-between">
+            <span>${job.company}</span>
+            <a href="${job.url}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:text-indigo-800 hover:underline text-[11px] font-semibold flex items-center gap-0.5">
+              原始链接 ↗
+            </a>
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap mb-3">
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded text-xs">${job.salaryText || '>=15K'}</span>
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">${job.city}</span>
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">${job.platform}</span>
+          </div>
+          <div class="text-[11px] text-slate-400 border-t border-slate-100 pt-2 flex items-center justify-between">
+            <span>🕒 ${job.publishOrActiveTime || '近期在线'}</span>
+            <span>🚇 约 45~60 分</span>
+          </div>
+          ${footerExtra}
+          <div class="mt-2.5 pt-2 border-t border-slate-50 flex items-center justify-between">
+            <a href="${job.url}" target="_blank" onclick="event.stopPropagation()" class="w-full py-1.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-600 hover:text-indigo-700 rounded-lg text-xs font-semibold text-center transition flex items-center justify-center gap-1">
+              🔗 打开原始招聘页面 ↗
+            </a>
+          </div>
+        `;
+
+        if (record.status === 'PENDING_REVIEW') {
+          cols.pending.appendChild(card);
+          counts.pending++;
+        } else if (record.status === 'APPROVED') {
+          cols.approved.appendChild(card);
+          counts.approved++;
+        } else if (['APPLIED', 'COMMUNICATING', 'INTERVIEWING', 'OFFER'].includes(record.status)) {
+          cols.applied.appendChild(card);
+          counts.applied++;
+        } else {
+          cols.rejected.appendChild(card);
+          counts.rejected++;
+        }
+      });
+
+      document.getElementById('count-pending').innerText = counts.pending;
+      document.getElementById('count-approved').innerText = counts.approved;
+      document.getElementById('count-applied').innerText = counts.applied;
+      document.getElementById('count-rejected').innerText = counts.rejected;
+    }
+
+    // 折叠 / 展开看板列
+    function toggleColumn(colKey) {
+      const box = document.getElementById(`col-box-${colKey}`);
+      const content = document.getElementById(`col-${colKey}`);
+      if (box.classList.contains('w-80')) {
+        box.classList.remove('w-80');
+        box.classList.add('w-16');
+        content.style.display = 'none';
+      } else {
+        box.classList.remove('w-16');
+        box.classList.add('w-80');
+        content.style.display = 'block';
+      }
+    }
+
+    // 抽屉控制
+    function openDrawer(record) {
+      currentDrawerJob = record;
+      const job = record.job;
+      const tailor = record.tailoredResume;
+
+      document.getElementById('drawer-title').innerText = job.title;
+      document.getElementById('drawer-subtitle').innerText = `${job.company} ｜ ${job.salaryText || '面议'}`;
+      document.getElementById('drawer-link').href = job.url;
+      document.getElementById('drawer-link-text').href = job.url;
+      document.getElementById('drawer-link-text').innerText = job.url;
+      document.getElementById('drawer-link-btn').href = job.url;
+      const matchedCommute = (record.filterResult?.reasons || []).find(r => r.includes('通勤') || r.includes('线下') || r.includes('起点')) || '同城常规公共交通通勤范围';
+      document.getElementById('drawer-commute').innerText = matchedCommute.replace('命中求职场景：', '');
+      document.getElementById('drawer-source').innerText = `${job.platform} ｜ ${job.publishOrActiveTime || '近 3 个月在线'}`;
+
+      const reasonsEl = document.getElementById('drawer-reasons');
+      reasonsEl.innerHTML = '';
+      (record.filterResult?.reasons || ['匹配核心工作年限与职能']).forEach(r => {
+        reasonsEl.innerHTML += `<div>• ${r}</div>`;
+      });
+
+      document.getElementById('drawer-greeting').innerText = tailor?.greetingMessage || '您好！对贵司岗位非常感兴趣，期待沟通！';
+      document.getElementById('drawer-resume').innerHTML = marked.parse(tailor?.markdownContent || '> 暂无生成的简历');
+
+      const drawer = document.getElementById('job-drawer');
+      drawer.style.display = 'flex';
+      document.getElementById('drawer-backdrop').classList.remove('hidden');
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById('job-drawer');
+      drawer.style.display = 'none';
+      document.getElementById('drawer-backdrop').classList.add('hidden');
+      currentDrawerJob = null;
+    }
+
+    // 键盘 ESC 键一键收起抽屉
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDrawer();
+      }
+    });
+
+    function copyGreeting() {
+      const text = document.getElementById('drawer-greeting').innerText;
+      navigator.clipboard.writeText(text);
+      alert('已复制打招呼话术！');
+    }
+
+    function copyJobUrl() {
+      const text = document.getElementById('drawer-link-text').href;
+      navigator.clipboard.writeText(text);
+      alert('已复制原始招聘页面链接！');
+    }
+
+    async function handleDrawerAction(action) {
+      if (!currentDrawerJob) return;
+      try {
+        await fetch(`/api/jobs/${currentDrawerJob.job.id}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        closeDrawer();
+        loadJobs();
+      } catch (e) {
+        alert('操作失败: ' + e.message);
+      }
+    }
+
+    // 触发单次极速扫描
+    async function triggerScan() {
+      const btn = event.target;
+      btn.innerText = '⏳ 正在扫描 Chrome...';
+      try {
+        const res = await fetch('/api/scan', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || '扫描已完成');
+        loadJobs();
+      } catch (e) {
+        alert('扫描失败: ' + e.message);
+      } finally {
+        btn.innerText = '⚡ 立即同步 Chrome 招聘页';
+      }
+    }
+
+    // LLM 配置交互
+    async function loadLlmConfig() {
+      try {
+        const res = await fetch('/api/config/llm');
+        const data = await res.json();
+        document.getElementById('llm-base-url').value = data.baseUrl || '';
+        document.getElementById('llm-api-key').value = data.apiKey || '';
+        document.getElementById('llm-model').value = data.model || 'deepseek-chat';
+        document.getElementById('llm-temperature').value = data.temperature ?? 0.3;
+      } catch (e) {}
+    }
+
+    async function saveLlmConfig() {
+      const cfg = {
+        baseUrl: document.getElementById('llm-base-url').value.trim(),
+        apiKey: document.getElementById('llm-api-key').value.trim(),
+        model: document.getElementById('llm-model').value.trim(),
+        temperature: parseFloat(document.getElementById('llm-temperature').value)
+      };
+      await fetch('/api/config/llm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+      alert('✅ 大模型配置保存成功！');
+    }
+
+    async function testLlmConnection() {
+      const resEl = document.getElementById('llm-test-result');
+      resEl.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
+      resEl.innerText = '正在向模型发出测试请求...';
+
+      try {
+        const res = await fetch('/api/config/llm/test', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          resEl.classList.add('text-emerald-600');
+          resEl.innerText = '✅ ' + data.message;
+        } else {
+          resEl.classList.add('text-rose-600');
+          resEl.innerText = '❌ ' + data.message;
+        }
+      } catch (e) {
+        resEl.classList.add('text-rose-600');
+        resEl.innerText = '❌ 请求异常: ' + e.message;
+      }
+    }
+
+    // 安全防风控状态
+    async function loadSafetyStatus() {
+      try {
+        const res = await fetch('/api/safety/status');
+        const data = await res.json();
+        const badge = document.getElementById('safety-status-badge');
+        const breakerText = document.getElementById('safety-breaker-text');
+        const quotaText = document.getElementById('safety-quota-text');
+
+        if (data.circuitBreakerTripped) {
+          badge.className = 'px-2 py-0.5 rounded text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200';
+          badge.innerText = '⚠️ 熔断休眠中 (已阻断抓取)';
+          breakerText.className = 'text-xs font-bold text-rose-600';
+          breakerText.innerText = `已触发休眠：${data.trippedReason || '检测到风控风险'}`;
+        } else {
+          badge.className = 'px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+          badge.innerText = '🛡️ 安全护航中';
+          breakerText.className = 'text-xs font-bold text-emerald-600';
+          breakerText.innerText = '未触发（安全）';
+        }
+
+        const counts = data.dailyCount || {};
+        quotaText.innerText = `BOSS: ${counts.BOSS || 0}/20 ｜ 猎聘: ${counts.LIEPIN || 0}/20 ｜ 智联: ${counts.ZHAOPIN || 0}/20`;
+      } catch (e) {}
+    }
+
+    async function resetSafetyBreaker() {
+      await fetch('/api/safety/reset', { method: 'POST' });
+      alert('✅ 风控熔断已复位，系统恢复安全运行状态！');
+      loadSafetyStatus();
+    }
+
+    // 飞书配置与测试
+    async function loadFeishuConfig() {
+      try {
+        const res = await fetch('/api/config/feishu');
+        const data = await res.json();
+        document.getElementById('feishu-webhook-url').value = data.webhookUrl || '';
+        document.getElementById('feishu-app-id').value = data.appId || '';
+        document.getElementById('feishu-app-secret').value = data.appSecret || '';
+      } catch (e) {}
+    }
+
+    async function saveFeishuConfig() {
+      const payload = {
+        webhookUrl: document.getElementById('feishu-webhook-url').value.trim(),
+        appId: document.getElementById('feishu-app-id').value.trim(),
+        appSecret: document.getElementById('feishu-app-secret').value.trim()
+      };
+      await fetch('/api/config/feishu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert('✅ 飞书配置已成功保存！');
+    }
+
+    async function testFeishuNotification() {
+      const resEl = document.getElementById('feishu-test-result');
+      resEl.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
+      resEl.innerText = '正在向飞书推送测试卡片...';
+      try {
+        const res = await fetch('/api/config/feishu/test', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          resEl.classList.add('text-emerald-600');
+          resEl.innerText = '✅ 测试卡片已成功送达您的飞书，请打开手机查看！';
+        } else {
+          resEl.classList.add('text-rose-600');
+          resEl.innerText = '❌ 推送失败: ' + (data.message || '请检查 Webhook 地址');
+        }
+      } catch (e) {
+        resEl.classList.add('text-rose-600');
+        resEl.innerText = '❌ 网络请求异常: ' + e.message;
+      }
+    }
+
+    // 偏好配置
+    async function loadPreferences() {
+      try {
+        const res = await fetch('/api/config/preferences');
+        const data = await res.json();
+        document.getElementById('pref-target-cities').value = (data.scenarios?.onsite?.targetCities || ['长沙']).join(', ');
+        document.getElementById('pref-home-base').value = data.scenarios?.onsite?.homeBase || '';
+        document.getElementById('pref-salary-min').value = data.scenarios?.onsite?.salaryRange?.min || 15000;
+        document.getElementById('pref-commute-max').value = data.scenarios?.onsite?.maxCommuteMinutes || 90;
+        document.getElementById('pref-double-weekend').checked = !!data.strictRules?.mustDoubleWeekend;
+        document.getElementById('pref-exclude-kw').value = (data.strictRules?.excludeKeywords || []).join(', ');
+        document.getElementById('pref-exclude-companies').value = (data.strictRules?.excludeCompanies || []).join(', ');
+      } catch (e) {}
+    }
+
+    async function savePreferences() {
+      const targetCities = document.getElementById('pref-target-cities').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const homeBase = document.getElementById('pref-home-base').value.trim();
+      const excludeCompanies = document.getElementById('pref-exclude-companies').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+
+      const payload = {
+        targetCities: targetCities.length ? targetCities : ['长沙'],
+        homeBase: homeBase || '常住地',
+        salaryMin: parseInt(document.getElementById('pref-salary-min').value, 10),
+        commuteMax: parseInt(document.getElementById('pref-commute-max').value, 10),
+        doubleWeekend: document.getElementById('pref-double-weekend').checked,
+        excludeKeywords: document.getElementById('pref-exclude-kw').value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+        excludeCompanies
+      };
+      await fetch('/api/config/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert('✅ 求职偏好规则已保存并生效！');
+    }
+
+    let currentProfileData = null;
+    let profileChatHistory = [];
+
+    // 全量主档案渲染逻辑
+    async function loadProfileJson() {
+      try {
+        const res = await fetch('/api/config/profile');
+        const data = await res.json();
+        currentProfileData = data;
+        document.getElementById('profile-json-editor').value = JSON.stringify(data, null, 2);
+        renderProfileVisual(data);
+      } catch (e) {
+        console.error('加载履历失败:', e);
+      }
+    }
+
+    function renderProfileVisual(profile) {
+      if (!profile) return;
+      // 基础信息
+      document.getElementById('pv-name').innerText = profile.basicInfo?.name || '候选人';
+      document.getElementById('pv-title').innerText = `${profile.basicInfo?.title || '专业人才'} (${profile.basicInfo?.yearsOfExperience || ''}年经验)`;
+      document.getElementById('pv-phone').innerText = profile.basicInfo?.phone || '';
+      document.getElementById('pv-email').innerText = profile.basicInfo?.email || '';
+      document.getElementById('pv-location').innerText = profile.basicInfo?.location || '长沙';
+      if (profile.basicInfo?.education) {
+        document.getElementById('pv-edu').innerText = `${profile.basicInfo.education.school} · ${profile.basicInfo.education.major} · ${profile.basicInfo.education.degree}`;
+      }
+
+      // 核心优势
+      const summaryEl = document.getElementById('pv-summary');
+      summaryEl.innerHTML = '';
+      (profile.summary || []).forEach(s => {
+        summaryEl.innerHTML += `
+          <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs text-slate-700 leading-relaxed flex items-start gap-2">
+            <span class="text-indigo-500 font-bold mt-0.5">✦</span>
+            <span>${s}</span>
+          </div>
+        `;
+      });
+
+      // 工作经历
+      const expEl = document.getElementById('pv-experiences');
+      expEl.innerHTML = '';
+      (profile.workExperiences || []).forEach((exp, idx) => {
+        let highlightsHtml = '';
+        (exp.highlights || []).forEach(h => {
+          highlightsHtml += `
+            <div class="mt-2.5 pt-2 border-t border-slate-100">
+              <div class="font-bold text-xs text-indigo-900 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> ${h.module}
+              </div>
+              <div class="text-xs text-slate-600 mt-1 whitespace-pre-line leading-relaxed pl-3">${h.details}</div>
+            </div>
+          `;
+        });
+
+        expEl.innerHTML += `
+          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-indigo-300 transition">
+            <div class="flex items-start justify-between">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900">${exp.company}</h4>
+                <div class="text-xs text-indigo-600 font-semibold mt-0.5">${exp.role}</div>
+              </div>
+              <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[11px] font-mono">${exp.startDate} ~ ${exp.endDate}</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-2 italic bg-slate-50 p-2 rounded">${exp.description}</p>
+            <div class="mt-3 space-y-1.5">${highlightsHtml}</div>
+          </div>
+        `;
+      });
+
+      // 技能栈
+      const aiSkillsEl = document.getElementById('pv-skills-ai');
+      aiSkillsEl.innerHTML = '';
+      (profile.skills?.aiAndDigitalization || []).forEach(sk => {
+        aiSkillsEl.innerHTML += `<span class="px-2 py-1 bg-white border border-indigo-200 text-indigo-800 rounded text-[11px] font-medium">${sk}</span>`;
+      });
+
+      const mfgSkillsEl = document.getElementById('pv-skills-mfg');
+      mfgSkillsEl.innerHTML = '';
+      (profile.skills?.industrialEngineering || []).forEach(sk => {
+        mfgSkillsEl.innerHTML += `<span class="px-2 py-1 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium">${sk}</span>`;
+      });
+
+      // 证书
+      const certsEl = document.getElementById('pv-certs');
+      certsEl.innerHTML = '';
+      (profile.skills?.certifications || []).forEach(c => {
+        certsEl.innerHTML += `
+          <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+            <div class="font-bold text-slate-800">${c.title}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">${c.org} ｜ ${c.date} ｜ ${c.note || ''}</div>
+          </div>
+        `;
+      });
+    }
+
+    // 切换 JSON 源码视图与可视化视图
+    function toggleProfileJsonView() {
+      const visual = document.getElementById('profile-visual-container');
+      const raw = document.getElementById('profile-raw-container');
+      const btn = document.getElementById('btn-toggle-json');
+
+      if (raw.classList.contains('hidden')) {
+        raw.classList.remove('hidden');
+        visual.classList.add('hidden');
+        btn.innerText = '👁️ 可视化视图';
+        btn.classList.add('bg-indigo-50', 'text-indigo-700');
+      } else {
+        raw.classList.add('hidden');
+        visual.classList.remove('hidden');
+        btn.innerText = '{ } 源码模式';
+        btn.classList.remove('bg-indigo-50', 'text-indigo-700');
+      }
+    }
+
+    // 加载并渲染持久化 AI 对话历史（以 Pi 原生会话树为底座）
+    async function loadProfileChatHistory() {
+      const msgBox = document.getElementById('profile-chat-messages');
+      try {
+        const res = await fetch('/api/profile/chat/history');
+        const data = await res.json();
+        const history = data.history || [];
+        const status = data.status;
+
+        if (status) {
+          const sidShort = (status.sessionId || '').slice(0, 8);
+          document.getElementById('copilot-pi-status').innerText = `Pi 会话: ${sidShort} ｜ 共 ${status.messageCount || 0} 条消息 ｜ 原生增量记忆`;
+        }
+
+        msgBox.innerHTML = '';
+        history.forEach(item => {
+          if (item.role === 'user') {
+            msgBox.innerHTML += `
+              <div class="flex items-start justify-end space-x-2">
+                <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm leading-relaxed max-w-[85%] whitespace-pre-line text-xs">
+                  ${item.content}
+                </div>
+                <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">我</div>
+              </div>
+            `;
+          } else {
+            const htmlContent = marked.parse(item.content);
+            msgBox.innerHTML += `
+              <div class="flex items-start space-x-2">
+                <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+                <div class="prose prose-sm max-w-[85%] bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-700 text-xs leading-relaxed overflow-x-auto">
+                  ${htmlContent}
+                </div>
+              </div>
+            `;
+          }
+        });
+        msgBox.scrollTop = msgBox.scrollHeight;
+      } catch (e) {
+        console.error('加载对话历史失败:', e);
+      }
+    }
+
+    // 调用 Pi 原生 Compaction 进行上下文智能压缩与记忆浓缩
+    async function compactProfileChatContext() {
+      if (!confirm('将调用 Pi 原生 Compaction 机制，把较长的上下文历史精练浓缩为关键记忆事实，节省后续 Token。是否继续？')) return;
+      try {
+        const res = await fetch('/api/profile/chat/compact', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ ' + (data.message || 'Pi 原生上下文压缩完成！'));
+          loadProfileChatHistory();
+        } else {
+          alert('提示: ' + data.message);
+        }
+      } catch (e) {
+        alert('压缩请求失败: ' + e.message);
+      }
+    }
+
+    // 输入框弹性自适应与快捷键
+    function autoExpandTextarea(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+    }
+
+    function handleChatInputKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendProfileChatMessage();
+      }
+    }
+
+    async function clearProfileChatHistory() {
+      if (!confirm('确定要重置当前的 Pi 会话并开启全新的探讨上下文吗？（左侧已保存的主档案不会受到影响）')) return;
+      await fetch('/api/profile/chat/history', { method: 'DELETE' });
+      loadProfileChatHistory();
+    }
+
+    // AI 履历精修对话 (纯增量提交给 Pi AgentSession，不重复传历史)
+    async function sendProfileChatMessage() {
+      const input = document.getElementById('profile-chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      const msgBox = document.getElementById('profile-chat-messages');
+
+      // 渲染用户发言气泡
+      msgBox.innerHTML += `
+        <div class="flex items-start justify-end space-x-2">
+          <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm leading-relaxed max-w-[85%] text-xs whitespace-pre-line">
+            ${msg}
+          </div>
+          <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">我</div>
+        </div>
+      `;
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      // 思考中占位
+      const loadingId = 'ai-loading-' + Date.now();
+      msgBox.innerHTML += `
+        <div id="${loadingId}" class="flex items-start space-x-2">
+          <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">Pi</div>
+          <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-400 italic text-xs">
+            Pi Agent 正在分析并提炼履历亮点...
+          </div>
+        </div>
+      `;
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      try {
+        // 关键升级：只传增量消息 { message }，Pi 会话树原生维护上下文
+        const res = await fetch('/api/profile/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        const data = await res.json();
+        document.getElementById(loadingId)?.remove();
+
+        if (data.code !== 0) {
+          alert('Pi 对话失败: ' + (data.error || '未知错误'));
+          return;
+        }
+
+        if (data.status) {
+          const sidShort = (data.status.sessionId || '').slice(0, 8);
+          document.getElementById('copilot-pi-status').innerText = `Pi 会话: ${sidShort} ｜ 共 ${data.status.messageCount || 0} 条消息 ｜ 原生增量记忆`;
+        }
+
+        const replyHtml = marked.parse(data.reply || '');
+        msgBox.innerHTML += `
+          <div class="flex items-start space-x-2">
+            <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">Pi</div>
+            <div class="prose prose-sm max-w-[85%] bg-white p-3.5 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-700 text-xs leading-relaxed overflow-x-auto">
+              ${replyHtml}
+            </div>
+          </div>
+        `;
+
+        msgBox.scrollTop = msgBox.scrollHeight;
+      } catch (e) {
+        document.getElementById(loadingId)?.remove();
+        alert('对话请求失败: ' + e.message);
+      }
+    }
+
+    function sendQuickPrompt(text) {
+      const input = document.getElementById('profile-chat-input');
+      input.value = text;
+      autoExpandTextarea(input);
+      sendProfileChatMessage();
+    }
+
+    async function saveProfileJson() {
+      try {
+        const raw = document.getElementById('profile-json-editor').value;
+        const parsed = JSON.parse(raw);
+        await fetch('/api/config/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed)
+        });
+        alert('✅ 全量个人主履历已更新保存！');
+      } catch (e) {
+        alert('JSON 格式错误，请检查语法！');
+      }
+    }
+  </script>
+</body>
+</html>

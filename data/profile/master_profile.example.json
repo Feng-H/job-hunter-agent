@@ -1,0 +1,86 @@
+{
+  "basicInfo": {
+    "name": "张三",
+    "title": "全栈开发工程师 / 架构师",
+    "yearsOfExperience": 8,
+    "phone": "13800000000",
+    "email": "zhangsan@example.com",
+    "location": "北京（支持远程/混合办公）",
+    "workModePreference": "远程办公 或 本地现场",
+    "education": {
+      "school": "某某大学",
+      "degree": "本科",
+      "major": "计算机科学与技术"
+    }
+  },
+  "summary": [
+    "复合型全栈架构师：拥有8年互联网与企业级软件研发经验，擅长高并发分布式架构与AI应用集成落地。",
+    "业务与技术双驱动：主导过大型中台微服务重构与性能调优，支撑千万级日活业务高可用运行。",
+    "极强自主交付能力：熟练使用 AI 编程工具与自动化流程，具备从产品原型设计到工程落地的端到端交付实力。"
+  ],
+  "workExperiences": [
+    {
+      "company": "某知名科技互联网集团",
+      "role": "资深后端架构师",
+      "startDate": "2022.03",
+      "endDate": "至今",
+      "description": "负责核心中台业务线架构设计、微服务治理及前沿技术探索落地。",
+      "highlights": [
+        {
+          "module": "分布式微服务中台改造",
+          "details": "主导完成核心系统服务化拆分，引入分布式缓存与消息队列，将接口平均响应时间降低 35%，系统并发支撑能力提升 3 倍。"
+        },
+        {
+          "module": "研发效能与工程化治理",
+          "details": "推行自动化 CI/CD 流水线与代码质量门禁，单元测试覆盖率提升至 80% 以上，线上发布故障率下降 50%。"
+        }
+      ]
+    },
+    {
+      "company": "某某创新软件科技有限公司",
+      "role": "全栈开发工程师",
+      "startDate": "2018.07",
+      "endDate": "2022.02",
+      "description": "主导面向 B 端客户的企业协同 SaaS 产品从 0 到 1 的研发与迭代交付。",
+      "highlights": [
+        {
+          "module": "核心业务流程引擎设计",
+          "details": "独立设计并实现工作流表单与审批引擎，支持企业用户高度灵活的低代码自定义配置，累计服务 200+ 付费企业客户。"
+        }
+      ]
+    }
+  ],
+  "skills": {
+    "aiAndDigitalization": [
+      "微服务架构 (Spring Cloud / Go / Node.js)",
+      "高并发分布式系统与数据库优化",
+      "大语言模型应用集成与 Prompt 工程",
+      "Docker / Kubernetes 云原生部署",
+      "Vue / React 现代前端框架",
+      "Redis / Kafka / PostgreSQL"
+    ],
+    "industrialEngineering": [
+      "软件工程生命周期管理",
+      "系统高可用与容灾方案设计",
+      "DevOps 与自动化测试",
+      "敏捷开发与 Scrum 实践"
+    ],
+    "projectManagement": [
+      "跨职能项目团队管理",
+      "需求分析与技术评审",
+      "架构演进路线规划"
+    ],
+    "languages": [
+      "中文 (母语)",
+      "英语 (技术读写流利)"
+    ],
+    "certifications": [
+      {
+        "title": "AWS Certified Solutions Architect",
+        "org": "Amazon Web Services",
+        "date": "2023.05",
+        "note": "Associate"
+      }
+    ]
+  }
+}
