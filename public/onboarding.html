@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job-Hunter OS ｜ 3分钟快速初始化向导 (Onboarding)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .step-active { border-color: #4f46e5; color: #4f46e5; font-weight: 700; }
+    .step-done { border-color: #10b981; color: #10b981; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col font-sans">
+
+  <!-- 顶部导航 -->
+  <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white flex items-center justify-center font-black text-lg shadow-md shadow-indigo-100">
+        🎯
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-slate-900 tracking-tight text-base">Job-Hunter OS</span>
+          <span class="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-bold border border-indigo-200">向导模式</span>
+        </div>
+        <div class="text-xs text-slate-400">基于 Pi Agent 的智能求职协作操作系统 · 快速初始化</div>
+      </div>
+    </div>
+    <div>
+      <a href="/" class="text-xs text-slate-500 hover:text-slate-800 font-medium transition flex items-center gap-1">
+        <span>跳过向导，直接进入看板</span> ➔
+      </a>
+    </div>
+  </header>
+
+  <!-- 步骤导航条 -->
+  <div class="bg-white border-b border-slate-200 px-8 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between text-xs font-semibold text-slate-400">
+      <div id="step-indicator-1" class="flex items-center gap-2 step-active">
+        <span class="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">1</span>
+        <span>配置大模型 (LLM)</span>
+      </div>
+      <span class="text-slate-300">───</span>
+      <div id="step-indicator-2" class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">2</span>
+        <span>导入现有简历</span>
+      </div>
+      <span class="text-slate-300">───</span>
+      <div id="step-indicator-3" class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">3</span>
+        <span>意向与严苛红线</span>
+      </div>
+      <span class="text-slate-300">───</span>
+      <div id="step-indicator-4" class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">4</span>
+        <span>AI 专属合伙人对齐</span>
+      </div>
+      <span class="text-slate-300">───</span>
+      <div id="step-indicator-5" class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center">5</span>
+        <span>点火启动</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主体内容容器 -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-6 md:p-8 flex flex-col">
+
+    <!-- ==================== STEP 1: 配置大模型 ==================== -->
+    <div id="step-panel-1" class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col">
+      <div class="mb-6">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <span>🔌 第一步：配置大语言模型 (LLM)</span>
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">
+          Job-Hunter OS 依赖大模型进行 <b>简历语义深度剪裁</b>、<b>高转化打招呼话术生成</b> 及 <b>STAR 原则履历打磨</b>。支持任何兼容 OpenAI 协议的模型。
+        </p>
+      </div>
+
+      <!-- 快捷预设按钮 -->
+      <div class="mb-5">
+        <label class="block text-xs font-bold text-slate-600 mb-2">⚡ 快速选择服务商预设：</label>
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+          <button type="button" onclick="applyLlmPreset('deepseek')" class="px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 text-indigo-700 font-semibold hover:bg-indigo-100 transition">
+            DeepSeek (推荐/高性价比)
+          </button>
+          <button type="button" onclick="applyLlmPreset('zhipu')" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 transition">
+            智谱 GLM (glm-4-plus)
+          </button>
+          <button type="button" onclick="applyLlmPreset('qwen')" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 transition">
+            通义千问 (qwen-plus)
+          </button>
+          <button type="button" onclick="applyLlmPreset('ollama')" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 transition">
+            本地 Ollama (开源私有)
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-4 flex-1">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">API 基础地址 (Base URL)</label>
+          <input id="llm-base-url" type="text" value="https://api.deepseek.com/v1" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">API Key 密钥</label>
+          <input id="llm-api-key" type="password" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">模型名称 (Model)</label>
+            <input id="llm-model" type="text" value="deepseek-chat" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">发散度 (Temperature)</label>
+            <input id="llm-temp" type="number" step="0.1" min="0" max="1" value="0.3" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between">
+          <button type="button" onclick="testLlmStep1()" id="btn-test-llm" class="px-4 py-2 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+            <span>⚡ 测试连通性</span>
+          </button>
+          <span id="llm-test-msg" class="text-xs font-medium"></span>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex justify-end">
+        <button type="button" onclick="goToStep(2)" id="btn-step1-next" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 transition">
+          下一步：导入简历 ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 2: 导入现有简历 ==================== -->
+    <div id="step-panel-2" class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col hidden">
+      <div class="mb-4">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <span>📄 第二步：导入您现有的个人简历</span>
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">
+          无论您手头是 PDF、Word、Markdown 还是 Boss 网页复制的纯文本，直接上传或粘贴，AI 将自动深度解构成标准档案。
+        </p>
+      </div>
+
+      <div class="space-y-4 flex-1">
+        <!-- 文件上传区域 -->
+        <div class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 text-center bg-slate-50/50 hover:bg-indigo-50/30 transition cursor-pointer" onclick="document.getElementById('file-resume').click()">
+          <input type="file" id="file-resume" accept=".pdf,.txt,.md" class="hidden" onchange="handleResumeFileUpload(event)">
+          <div class="w-10 h-10 mx-auto rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg mb-2">📁</div>
+          <p class="text-xs font-bold text-slate-700">点击上传简历文件（支持 .pdf、.txt、.md）</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">或直接将文件拖拽至此处</p>
+          <div id="upload-status" class="text-xs font-medium text-indigo-600 mt-2 hidden"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-700">或者直接粘贴简历完整文本：</label>
+            <span class="text-[11px] text-slate-400">已输入 <span id="text-resume-len">0</span> 字</span>
+          </div>
+          <textarea id="resume-raw-text" rows="6" oninput="document.getElementById('text-resume-len').innerText=this.value.length" placeholder="在此粘贴您的个人履历文本（包含基本信息、教育背景、工作经历、主要项目战绩与技能栈）..." class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none custom-scrollbar"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <button type="button" onclick="parseResumeStep2()" id="btn-parse-resume" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 transition flex items-center gap-1.5">
+            <span>✨ AI 深度解构简历</span>
+          </button>
+          <span id="parse-loading" class="text-xs text-indigo-600 font-medium hidden">⏳ AI 正在深度阅读与结构化提取，请稍候...</span>
+        </div>
+
+        <!-- 提取结果卡片预览 -->
+        <div id="parse-preview-box" class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl text-xs space-y-2 hidden">
+          <div class="flex items-center justify-between text-emerald-800 font-bold">
+            <span class="flex items-center gap-1.5"><span>✅</span> 简历解构完成！已识别核心信息：</span>
+            <span id="preview-years" class="text-[11px] px-2 py-0.5 bg-emerald-100 rounded"></span>
+          </div>
+          <div class="text-slate-700 grid grid-cols-2 gap-2 pt-1">
+            <div><b>候选人姓名：</b> <span id="preview-name" class="font-bold text-slate-900"></span></div>
+            <div><b>核心头衔定位：</b> <span id="preview-title"></span></div>
+            <div><b>毕业院校与专业：</b> <span id="preview-edu"></span></div>
+            <div><b>任职公司履历：</b> <span id="preview-companies"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+        <button type="button" onclick="goToStep(1)" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-xs font-semibold transition">
+          ⬅ 上一步
+        </button>
+        <button type="button" onclick="goToStep(3)" id="btn-step2-next" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 transition">
+          下一步：设定意向与红线 ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 3: 设定意向与红线 ==================== -->
+    <div id="step-panel-3" class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col hidden">
+      <div class="mb-4">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <span>🎯 第三步：设定求职意向与严苛红线</span>
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">
+          每个人的底线都不一样。系统将把这些条件作为<b>不可逾越的硬性门槛</b>，自动排查并淘汰不符岗位。
+        </p>
+      </div>
+
+      <div class="space-y-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+        <!-- 工作模式与地点 -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700">📍 工作模式与地点</span>
+            <div class="flex items-center gap-4 text-xs">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input id="ob-remote-enabled" type="checkbox" checked class="w-3.5 h-3.5 text-indigo-600 rounded">
+                <span>支持远程 (Remote)</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input id="ob-onsite-enabled" type="checkbox" checked class="w-3.5 h-3.5 text-indigo-600 rounded">
+                <span>支持现场 (On-site)</span>
+              </label>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">目标城市</label>
+              <input id="ob-target-cities" type="text" value="长沙" placeholder="如：长沙, 北京" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">常住地 / 通勤起点</label>
+              <input id="ob-home-base" type="text" value="松雅湖南地铁站" placeholder="如：某某地铁站" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">单程通勤上限 (分钟)</label>
+              <input id="ob-commute-max" type="number" value="90" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- 工作制与时效 -->
+        <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-700">🏖️ 工作制底线与时效审查</span>
+            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-indigo-700">
+              <input id="ob-double-weekend" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
+              <span>严格周末双休（单休/大小周一票否决）</span>
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">非双休违规词</label>
+              <input id="ob-disallowed-schedules" type="text" value="单休, 大小周, 轮休, 单双休, 月休4天, 做六休一" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">岗位时效最大月数（0表示不限）</label>
+              <input id="ob-max-stale-months" type="number" value="3" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- 薪资与目标职位 -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2">
+            <label class="block text-xs font-bold text-slate-700">💰 期望最低月薪 (元)</label>
+            <input id="ob-salary-min" type="number" step="1000" value="15000" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-indigo-600">
+            <p class="text-[11px] text-slate-400">低于此薪资范围的岗位将被过滤</p>
+          </div>
+          <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2">
+            <label class="block text-xs font-bold text-slate-700">🎯 期望职位关键词</label>
+            <input id="ob-target-roles" type="text" placeholder="如：AI产品经理, 架构师, 数字化专家" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            <p class="text-[11px] text-slate-400">用于重点推荐契合的职能标签</p>
+          </div>
+        </div>
+
+        <!-- 排除与黑名单 -->
+        <div class="p-3.5 bg-rose-50/50 border border-rose-100 rounded-xl space-y-3">
+          <span class="text-xs font-bold text-rose-700">🚫 硬性排除形式与企业黑名单</span>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">禁止形式关键词（命中即淘汰）</label>
+              <input id="ob-exclude-kw" type="text" value="驻场, 驻厂, 常驻客户现场, 外派异地, 纯销售" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">排除公司黑名单</label>
+              <input id="ob-exclude-companies" type="text" placeholder="如：某某外包, 某某公司" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+        <button type="button" onclick="goToStep(2)" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-xs font-semibold transition">
+          ⬅ 上一步
+        </button>
+        <button type="button" onclick="goToStep(4)" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-100 transition">
+          下一步：AI 专属合伙人对齐 ➔
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 4: AI 专属合伙人交互对齐 ==================== -->
+    <div id="step-panel-4" class="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col hidden">
+      <div class="mb-4">
+        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <span>🤝 第四步：与 AI 专属求职合伙人对齐确认</span>
+        </h2>
+        <p class="text-sm text-slate-500 mt-1">
+          AI 已整合您的简历与意向。请在下方对话框提出任何微调，AI 会即时更新您的档案与过滤红线！
+        </p>
+      </div>
+
+      <div class="flex-1 flex space-x-5 overflow-hidden min-h-[380px]">
+        <!-- 左侧：实时汇总卡片 (45%) -->
+        <div class="w-[45%] bg-slate-50 border border-slate-200 rounded-xl p-4 overflow-y-auto custom-scrollbar text-xs space-y-4">
+          <div>
+            <div class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">👤 候选人主画像</div>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+              <div class="font-bold text-sm text-slate-900" id="align-preview-name">候选人</div>
+              <div class="text-indigo-600 font-semibold" id="align-preview-title">定位中...</div>
+              <div class="text-slate-500" id="align-preview-exp">--</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">⚖️ 已设定的求职红线</div>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5" id="align-preview-rules">
+              <!-- 动态填充 -->
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider mb-1">💼 核心履历脉络</div>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2" id="align-preview-experiences">
+              <!-- 动态填充 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：AI 对齐对话工作台 (55%) -->
+        <div class="flex-1 flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-700">
+            <span class="flex items-center gap-1.5"><span>🧠</span> AI 专属求职合伙人对齐中</span>
+            <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">双向确认中</span>
+          </div>
+
+          <div id="align-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar text-xs">
+            <!-- 消息流 -->
+          </div>
+
+          <div class="p-3 border-t border-slate-200 bg-white">
+            <div class="flex items-center space-x-2">
+              <input id="align-chat-input" onkeydown="if(event.key==='Enter') sendAlignChatMessage()" type="text" placeholder="对当前画像或红线有任何想调整的，直接打字告诉 AI..." class="flex-1 px-3.5 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <button onclick="sendAlignChatMessage()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition flex-shrink-0">
+                发送调整
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-5 border-t border-slate-100 flex items-center justify-between mt-4">
+        <button type="button" onclick="goToStep(3)" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-xs font-semibold transition">
+          ⬅ 上一步
+        </button>
+        <button type="button" onclick="finalizeOnboarding()" id="btn-finalize" class="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-emerald-100 transition flex items-center gap-2">
+          <span>🔥 确认无误，点火启动系统！</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== STEP 5: 启动就绪 ==================== -->
+    <div id="step-panel-5" class="bg-white p-8 md:p-12 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col items-center justify-center text-center hidden">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-4 shadow-sm">
+        🎉
+      </div>
+      <h2 class="text-2xl font-black text-slate-900 mb-2">Job-Hunter OS 初始化成功！</h2>
+      <p class="text-sm text-slate-500 max-w-lg mb-8 leading-relaxed">
+        恭喜！您的专属个人履历库（<code>master_profile.json</code>）与求职红线过滤规则已全部完成固化落盘并实时注入系统。
+      </p>
+
+      <div class="grid grid-cols-3 gap-4 max-w-2xl w-full text-left mb-8 text-xs">
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <div class="font-bold text-slate-800 mb-1">1. 安装一键书签</div>
+          <p class="text-slate-500 text-[11px] leading-relaxed">将书签工具拖入浏览器书签栏，在招聘平台随手点击即可采集。</p>
+        </div>
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <div class="font-bold text-slate-800 mb-1">2. 严苛初筛与裁剪</div>
+          <p class="text-slate-500 text-[11px] leading-relaxed">系统自动排查双休、通勤与薪资，并为您定制高转化简历。</p>
+        </div>
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+          <div class="font-bold text-slate-800 mb-1">3. 看板决策投递</div>
+          <p class="text-slate-500 text-[11px] leading-relaxed">在 Web 看板一览管道状态，一键复制话术与投递决策。</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a href="/setup" class="px-5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition">
+          📌 查看书签安装页
+        </a>
+        <a href="/" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md shadow-indigo-100 transition">
+          👉 进入 Job-Hunter OS 工作台
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 逻辑脚本 -->
+  <script>
+    let currentStep = 1;
+    let draftProfile = null;
+    let draftRules = null;
+    let alignHistory = [];
+
+    // 初始化预填充
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 检查当前已有配置
+      try {
+        const res = await fetch('/api/config/llm');
+        const cfg = await res.json();
+        if (cfg.baseUrl) document.getElementById('llm-base-url').value = cfg.baseUrl;
+        if (cfg.apiKey) document.getElementById('llm-api-key').value = cfg.apiKey;
+        if (cfg.model) document.getElementById('llm-model').value = cfg.model;
+      } catch (e) {}
+    });
+
+    // 服务商预设
+    function applyLlmPreset(preset) {
+      if (preset === 'deepseek') {
+        document.getElementById('llm-base-url').value = 'https://api.deepseek.com/v1';
+        document.getElementById('llm-model').value = 'deepseek-chat';
+      } else if (preset === 'zhipu') {
+        document.getElementById('llm-base-url').value = 'https://open.bigmodel.cn/api/paas/v4';
+        document.getElementById('llm-model').value = 'glm-4-plus';
+      } else if (preset === 'qwen') {
+        document.getElementById('llm-base-url').value = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        document.getElementById('llm-model').value = 'qwen-plus';
+      } else if (preset === 'ollama') {
+        document.getElementById('llm-base-url').value = 'http://localhost:11434/v1';
+        document.getElementById('llm-model').value = 'llama3';
+      }
+    }
+
+    // 步骤切换
+    function goToStep(step) {
+      document.querySelectorAll('[id^="step-panel-"]').forEach(p => p.classList.add('hidden'));
+      document.getElementById(`step-panel-${step}`).classList.remove('hidden');
+
+      for (let i = 1; i <= 5; i++) {
+        const ind = document.getElementById(`step-indicator-${i}`);
+        if (i === step) {
+          ind.className = 'flex items-center gap-2 step-active';
+        } else if (i < step) {
+          ind.className = 'flex items-center gap-2 step-done';
+        } else {
+          ind.className = 'flex items-center gap-2 text-slate-400 font-semibold';
+        }
+      }
+      currentStep = step;
+
+      if (step === 4) {
+        initStep4Alignment();
+      }
+    }
+
+    function getLlmConfig() {
+      return {
+        provider: 'custom',
+        baseUrl: document.getElementById('llm-base-url').value.trim(),
+        apiKey: document.getElementById('llm-api-key').value.trim(),
+        model: document.getElementById('llm-model').value.trim(),
+        temperature: parseFloat(document.getElementById('llm-temp').value) || 0.3
+      };
+    }
+
+    // Step 1: 测试 LLM
+    async function testLlmStep1() {
+      const msgEl = document.getElementById('llm-test-msg');
+      msgEl.className = 'text-xs font-medium text-slate-500';
+      msgEl.innerText = '正在向模型测试连通性...';
+
+      const cfg = getLlmConfig();
+      try {
+        const res = await fetch('/api/onboarding/llm-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+        const data = await res.json();
+        if (data.code === 0 && data.success) {
+          msgEl.className = 'text-xs font-medium text-emerald-600';
+          msgEl.innerText = '✅ ' + data.message;
+        } else {
+          msgEl.className = 'text-xs font-medium text-rose-600';
+          msgEl.innerText = '❌ ' + (data.message || '连接失败');
+        }
+      } catch (e) {
+        msgEl.className = 'text-xs font-medium text-rose-600';
+        msgEl.innerText = '❌ 异常: ' + e.message;
+      }
+    }
+
+    // Step 2: 文件上传读取
+    async function handleResumeFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const statusEl = document.getElementById('upload-status');
+      statusEl.classList.remove('hidden');
+      statusEl.innerText = `正在读取文件: ${file.name}...`;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(',')[1];
+        try {
+          const res = await fetch('/api/onboarding/extract-file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileBase64: base64, fileName: file.name })
+          });
+          const data = await res.json();
+          if (data.code === 0 && data.text) {
+            document.getElementById('resume-raw-text').value = data.text;
+            document.getElementById('text-resume-len').innerText = data.text.length;
+            statusEl.innerText = `✅ 文件 ${file.name} 提取成功（${data.text.length} 字符），点击下方按钮解构！`;
+          } else {
+            statusEl.innerText = `❌ 提取失败: ${data.error || '无法提取'}`;
+          }
+        } catch (e) {
+          statusEl.innerText = `❌ 请求异常: ${e.message}`;
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Step 2: 调用 LLM 解析简历
+    async function parseResumeStep2() {
+      const text = document.getElementById('resume-raw-text').value.trim();
+      if (!text) {
+        alert('请先上传简历文件或在文本框中粘贴您的简历内容！');
+        return;
+      }
+
+      const btn = document.getElementById('btn-parse-resume');
+      const loading = document.getElementById('parse-loading');
+      btn.disabled = true;
+      loading.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/onboarding/parse-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, llmConfig: getLlmConfig() })
+        });
+        const data = await res.json();
+        if (data.code === 0 && data.profile) {
+          draftProfile = data.profile;
+          // 渲染预览
+          document.getElementById('parse-preview-box').classList.remove('hidden');
+          document.getElementById('preview-name').innerText = draftProfile.basicInfo?.name || '求职者';
+          document.getElementById('preview-title').innerText = draftProfile.basicInfo?.title || '专业人才';
+          document.getElementById('preview-years').innerText = `${draftProfile.basicInfo?.yearsOfExperience || 5} 年工作经验`;
+          if (draftProfile.basicInfo?.education) {
+            document.getElementById('preview-edu').innerText = `${draftProfile.basicInfo.education.school || ''} · ${draftProfile.basicInfo.education.major || ''}`;
+          }
+          const comps = (draftProfile.workExperiences || []).map(e => e.company).join(' ➔ ');
+          document.getElementById('preview-companies').innerText = comps || '已提取经历';
+
+          // 自动同步到 Step 3 中的期望职位默认值
+          if (draftProfile.basicInfo?.title) {
+            document.getElementById('ob-target-roles').value = draftProfile.basicInfo.title;
+          }
+        } else {
+          alert('解析失败: ' + (data.error || 'LLM 未返回有效格式'));
+        }
+      } catch (e) {
+        alert('解析请求异常: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        loading.classList.add('hidden');
+      }
+    }
+
+    // 构建当前的 DraftRules 对象
+    function buildDraftRulesFromInputs() {
+      const targetCities = document.getElementById('ob-target-cities').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const disallowedSchedules = document.getElementById('ob-disallowed-schedules').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const targetRoles = document.getElementById('ob-target-roles').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const excludeKeywords = document.getElementById('ob-exclude-kw').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const excludeCompanies = document.getElementById('ob-exclude-companies').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+
+      return {
+        strictRules: {
+          mustDoubleWeekend: document.getElementById('ob-double-weekend').checked,
+          disallowedWorkSchedules: disallowedSchedules.length ? disallowedSchedules : ['单休', '大小周', '轮休'],
+          maxStaleMonths: parseInt(document.getElementById('ob-max-stale-months').value, 10) ?? 3,
+          excludeKeywords,
+          excludeCompanies,
+          allowedCompanyTypes: ['自研', '外包', '劳务派遣', '国企', '外企', '民企'],
+          targetDomains: ['AI', '智能制造', '工业互联网', '数字化', '软件']
+        },
+        scenarios: {
+          remote: {
+            enabled: document.getElementById('ob-remote-enabled').checked,
+            name: '远程办公模式',
+            targetRoles,
+            preferredLocations: ['远程', 'Remote', 'Anywhere'],
+            salaryRange: {
+              min: parseInt(document.getElementById('ob-salary-min').value, 10) || 15000,
+              max: 50000,
+              currency: 'CNY'
+            },
+            workMode: 'REMOTE'
+          },
+          onsite: {
+            enabled: document.getElementById('ob-onsite-enabled').checked,
+            name: '本地线下办公',
+            homeBase: document.getElementById('ob-home-base').value.trim() || '常住地',
+            maxCommuteMinutes: parseInt(document.getElementById('ob-commute-max').value, 10) || 90,
+            targetCities: targetCities.length ? targetCities : ['长沙'],
+            targetRoles,
+            salaryRange: {
+              min: parseInt(document.getElementById('ob-salary-min').value, 10) || 15000,
+              max: 45000,
+              currency: 'CNY'
+            },
+            workMode: 'ONSITE'
+          }
+        },
+        scoringThresholds: {
+          minScoreToNotify: 75,
+          weights: { skillMatch: 0.4, experienceMatch: 0.3, scheduleAndBenefits: 0.2, growthAndDomain: 0.1 }
+        }
+      };
+    }
+
+    // Step 4: 初始化对齐对话与左侧视图
+    function initStep4Alignment() {
+      if (!draftRules) {
+        draftRules = buildDraftRulesFromInputs();
+      }
+      if (!draftProfile) {
+        draftProfile = {
+          basicInfo: {
+            name: '候选人',
+            title: document.getElementById('ob-target-roles').value || '专业人才',
+            yearsOfExperience: 5,
+            phone: '保密',
+            email: '保密',
+            location: document.getElementById('ob-target-cities').value || '全国'
+          },
+          workExperiences: [],
+          skills: { aiAndDigitalization: ['通用专业技能'], industrialEngineering: [], projectManagement: [] }
+        };
+      }
+
+      renderAlignSummary();
+
+      // 发起初始欢迎对齐语
+      const msgBox = document.getElementById('align-chat-messages');
+      if (alignHistory.length === 0) {
+        const welcome = `您好 **${draftProfile.basicInfo?.name || '求职者'}**！我是您的 Job-Hunter 专属 AI 履历与求职合伙人。\n\n我已经深度整合了您的简历与求职意向：\n- 💼 **目标定位**：${draftProfile.basicInfo?.title || '未设定'}（${draftProfile.basicInfo?.yearsOfExperience || 5} 年经验）\n- 📍 **地点范围**：${draftRules.scenarios?.onsite?.targetCities?.join('、') || '本地'}${draftRules.scenarios?.remote?.enabled ? ' ＋ 全球远程' : ''}\n- 🚇 **通勤起点**：${draftRules.scenarios?.onsite?.homeBase || '未设定'}（上限 ${draftRules.scenarios?.onsite?.maxCommuteMinutes || 90} 分钟）\n- 💰 **薪资底线**：>= ${draftRules.scenarios?.onsite?.salaryRange?.min || 15000} 元/月\n- 🏖️ **工作制红线**：${draftRules.strictRules?.mustDoubleWeekend ? '严格周末双休（一票否决单休/大小周）' : '弹性'}\n\n请问左侧的信息是否完全符合您的实际诉求？如果您希望对任何技能、薪资、经历细节或公司黑名单做增减，可以直接告诉我，我会立刻为您调整草稿！`;
+
+        alignHistory.push({ role: 'assistant', content: welcome });
+        msgBox.innerHTML = `
+          <div class="flex items-start space-x-2">
+            <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+            <div class="bg-slate-50 p-3.5 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 leading-relaxed max-w-[90%]">
+              ${marked.parse(welcome)}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function renderAlignSummary() {
+      if (!draftProfile || !draftRules) return;
+      document.getElementById('align-preview-name').innerText = draftProfile.basicInfo?.name || '候选人';
+      document.getElementById('align-preview-title').innerText = `${draftProfile.basicInfo?.title || '专业人才'} · ${draftProfile.basicInfo?.yearsOfExperience || 5}年经验`;
+      document.getElementById('align-preview-exp').innerText = `${draftProfile.basicInfo?.location || ''} ｜ ${draftProfile.basicInfo?.education?.school || ''}`;
+
+      const rulesEl = document.getElementById('align-preview-rules');
+      rulesEl.innerHTML = `
+        <div>• <b>地点</b>：${(draftRules.scenarios?.onsite?.targetCities || []).join('、')} (起点: ${draftRules.scenarios?.onsite?.homeBase || ''})</div>
+        <div>• <b>底线</b>：月薪 >= ${draftRules.scenarios?.onsite?.salaryRange?.min || 15000}元 ｜ 双休: ${draftRules.strictRules?.mustDoubleWeekend ? '严格' : '不限'}</div>
+        <div>• <b>排除</b>：${(draftRules.strictRules?.excludeKeywords || []).slice(0, 4).join('、')}</div>
+      `;
+
+      const expEl = document.getElementById('align-preview-experiences');
+      expEl.innerHTML = '';
+      (draftProfile.workExperiences || []).slice(0, 3).forEach(e => {
+        expEl.innerHTML += `
+          <div class="border-b border-slate-100 pb-1">
+            <div class="font-bold text-slate-800">${e.company}</div>
+            <div class="text-[11px] text-indigo-600">${e.role} (${e.startDate || ''} ~ ${e.endDate || ''})</div>
+          </div>
+        `;
+      });
+      if ((draftProfile.workExperiences || []).length === 0) {
+        expEl.innerHTML = '<span class="text-slate-400">暂无解析出的经历</span>';
+      }
+    }
+
+    // Step 4: 发送对齐对话
+    async function sendAlignChatMessage() {
+      const input = document.getElementById('align-chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      const msgBox = document.getElementById('align-chat-messages');
+      msgBox.innerHTML += `
+        <div class="flex items-start justify-end space-x-2">
+          <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm leading-relaxed max-w-[85%] text-xs">
+            ${text}
+          </div>
+          <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">我</div>
+        </div>
+      `;
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      const loadingId = 'ai-align-loading-' + Date.now();
+      msgBox.innerHTML += `
+        <div id="${loadingId}" class="flex items-start space-x-2">
+          <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+          <div class="bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-200 text-slate-400 italic text-xs">
+            正在分析调整并更新配置...
+          </div>
+        </div>
+      `;
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      try {
+        const res = await fetch('/api/onboarding/align-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            draftProfile,
+            draftRules,
+            history: alignHistory,
+            llmConfig: getLlmConfig()
+          })
+        });
+        const data = await res.json();
+        document.getElementById(loadingId)?.remove();
+
+        if (data.code === 0) {
+          if (data.updatedProfile) draftProfile = data.updatedProfile;
+          if (data.updatedRules) draftRules = data.updatedRules;
+          renderAlignSummary();
+
+          alignHistory.push({ role: 'user', content: text });
+          alignHistory.push({ role: 'assistant', content: data.reply });
+
+          msgBox.innerHTML += `
+            <div class="flex items-start space-x-2">
+              <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
+              <div class="bg-slate-50 p-3.5 rounded-2xl rounded-tl-none border border-slate-200 text-slate-700 leading-relaxed max-w-[90%]">
+                ${marked.parse(data.reply)}
+              </div>
+            </div>
+          `;
+          msgBox.scrollTop = msgBox.scrollHeight;
+        } else {
+          alert('对齐对话失败: ' + data.error);
+        }
+      } catch (e) {
+        document.getElementById(loadingId)?.remove();
+        alert('请求异常: ' + e.message);
+      }
+    }
+
+    // Step 4: 确认并点火启动
+    async function finalizeOnboarding() {
+      const btn = document.getElementById('btn-finalize');
+      btn.disabled = true;
+      btn.innerText = '⏳ 正在初始化数据并启动系统...';
+
+      try {
+        const res = await fetch('/api/onboarding/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile: draftProfile,
+            rules: draftRules,
+            llmConfig: getLlmConfig()
+          })
+        });
+        const data = await res.json();
+        if (data.code === 0) {
+          goToStep(5);
+        } else {
+          alert('初始化失败: ' + data.error);
+          btn.disabled = false;
+          btn.innerText = '🔥 确认无误，点火启动系统！';
+        }
+      } catch (e) {
+        alert('初始化异常: ' + e.message);
+        btn.disabled = false;
+        btn.innerText = '🔥 确认无误，点火启动系统！';
+      }
+    }
+  </script>
+</body>
+</html>

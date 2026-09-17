@@ -44,6 +44,22 @@ export class JobHunterCore {
   }
 
   /**
+   * 动态重新加载最新规则偏好与个人档案（Web看板保存后即时生效）
+   */
+  public reloadConfig(): void {
+    try {
+      this.filter.reloadRules();
+      const profilePath = path.resolve(process.cwd(), 'data/profile/master_profile.json');
+      if (fs.existsSync(profilePath)) {
+        this.profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
+      }
+      console.log('🔄 [JobHunterCore] 规则偏好与个人档案配置已动态重载生效！');
+    } catch (e) {
+      console.warn('⚠️ [JobHunterCore] 动态重载配置异常:', e);
+    }
+  }
+
+  /**
    * 处理单个真实岗位（用于书签实时采集或单独推送）
    */
   public async processSingleJob(job: JobPost): Promise<{ approved: boolean; reason?: string }> {

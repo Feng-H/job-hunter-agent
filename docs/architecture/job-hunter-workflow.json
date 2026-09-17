@@ -1,0 +1,298 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Job-Hunter OS：Workflow × Agent 协同架构",
+    "locale": "zh-CN",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "full-pipeline",
+        "label": "主干管道：从线索到投递",
+        "focus": [
+          "browser_ext",
+          "passive_ingest",
+          "safety_breaker",
+          "job_filter",
+          "jd_analyzer",
+          "resume_tailor",
+          "job_tracker",
+          "feishu_card"
+        ],
+        "note": "岗位线索经工作流初筛，由 Agent 深度裁剪，推送飞书决策。"
+      },
+      {
+        "id": "agent-core",
+        "label": "Agent 认知与推理层",
+        "focus": [
+          "pi_copilot",
+          "copilot_sessions",
+          "profile_store",
+          "jd_analyzer",
+          "resume_tailor"
+        ],
+        "note": "基于 Pi 核心与大模型的自主推理、事实沉淀与动态剪裁体系。"
+      },
+      {
+        "id": "workflow-safety",
+        "label": "Workflow 确定性护盾",
+        "focus": [
+          "passive_ingest",
+          "safety_breaker",
+          "job_filter",
+          "rules_store",
+          "job_tracker",
+          "feishu_card"
+        ],
+        "note": "零风控防封、硬性规则过滤与管道状态流转的确定性底座。"
+      }
+    ],
+    "output": "docs/architecture/job-hunter-os.html",
+    "viewBox": [
+      1200,
+      660
+    ]
+  },
+  "lanes": [
+    {
+      "id": "ui",
+      "label": "交互终端 Surfaces"
+    },
+    {
+      "id": "workflows",
+      "label": "Workflow 工作流管道"
+    },
+    {
+      "id": "agents",
+      "label": "Agent 智能体层"
+    },
+    {
+      "id": "durable",
+      "label": "持久化与记忆"
+    }
+  ],
+  "mainPath": [
+    "browser_ext",
+    "passive_ingest",
+    "safety_breaker",
+    "job_filter",
+    "jd_analyzer",
+    "resume_tailor",
+    "job_tracker",
+    "feishu_card"
+  ],
+  "nodes": [
+    {
+      "id": "browser_ext",
+      "lane": "ui",
+      "col": 0,
+      "type": "external",
+      "label": "一键采集书签",
+      "sublabel": "Chrome Bookmarklet",
+      "tag": "日常浏览触发",
+      "width": 136
+    },
+    {
+      "id": "passive_ingest",
+      "lane": "workflows",
+      "col": 0,
+      "type": "backend",
+      "label": "被动线索接入流",
+      "sublabel": "只读提取 / ATS 巡检",
+      "tag": "[Workflow]",
+      "width": 136
+    },
+    {
+      "id": "safety_breaker",
+      "lane": "workflows",
+      "col": 1,
+      "type": "security",
+      "label": "防风控熔断中枢",
+      "sublabel": "特征探测 / 拟人延时 / 配额",
+      "tag": "[Workflow] 零封号",
+      "width": 136
+    },
+    {
+      "id": "rules_store",
+      "lane": "durable",
+      "col": 1,
+      "type": "database",
+      "label": "求职红线配置库",
+      "sublabel": "rules.json 动态规则",
+      "tag": "配置中心",
+      "width": 136
+    },
+    {
+      "id": "job_filter",
+      "lane": "workflows",
+      "col": 2,
+      "type": "backend",
+      "label": "严格规则初筛流",
+      "sublabel": "双休 / 时效 / 通勤 / 薪资",
+      "tag": "[Workflow] 硬门槛",
+      "width": 136
+    },
+    {
+      "id": "pi_copilot",
+      "lane": "agents",
+      "col": 2,
+      "type": "cloud",
+      "label": "Pi 履历专家 Agent",
+      "sublabel": "STAR 挖掘 / 增量会话",
+      "tag": "[Agent] Pi 底座",
+      "width": 136
+    },
+    {
+      "id": "copilot_sessions",
+      "lane": "durable",
+      "col": 2,
+      "type": "database",
+      "label": "Pi 会话记忆库",
+      "sublabel": ".jsonl 增量树 / 压缩",
+      "tag": "持久记忆",
+      "width": 136
+    },
+    {
+      "id": "jd_analyzer",
+      "lane": "agents",
+      "col": 3,
+      "type": "cloud",
+      "label": "JD 深度洞察 Agent",
+      "sublabel": "痛点解构 / 风险识破",
+      "tag": "[Agent] LLM 推理",
+      "width": 136
+    },
+    {
+      "id": "profile_store",
+      "lane": "durable",
+      "col": 3,
+      "type": "database",
+      "label": "Master Profile",
+      "sublabel": "全量真实经历事实源",
+      "tag": "Ground Truth",
+      "width": 136
+    },
+    {
+      "id": "resume_tailor",
+      "lane": "agents",
+      "col": 4,
+      "type": "cloud",
+      "label": "简历动态裁剪 Agent",
+      "sublabel": "经历重塑 / 高转化话术",
+      "tag": "[Agent] LLM 生成",
+      "width": 136
+    },
+    {
+      "id": "job_tracker",
+      "lane": "workflows",
+      "col": 5,
+      "type": "messagebus",
+      "label": "求职状态机流",
+      "sublabel": "MD5 防重 / 冷却期 / 流转",
+      "tag": "[Workflow]",
+      "width": 136
+    },
+    {
+      "id": "feishu_card",
+      "lane": "ui",
+      "col": 5,
+      "type": "frontend",
+      "label": "飞书交互卡片",
+      "sublabel": "手机端一键审批决策",
+      "tag": "[Workflow] 闭环",
+      "width": 136
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-trigger",
+      "from": "browser_ext",
+      "to": "passive_ingest",
+      "label": "采集投递",
+      "variant": "default"
+    },
+    {
+      "id": "e-safety",
+      "from": "passive_ingest",
+      "to": "safety_breaker",
+      "label": "风控审查",
+      "variant": "security"
+    },
+    {
+      "id": "e-rules",
+      "from": "rules_store",
+      "to": "job_filter",
+      "label": "加载红线",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-filter",
+      "from": "safety_breaker",
+      "to": "job_filter",
+      "label": "安全放行",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-analyze",
+      "from": "job_filter",
+      "to": "jd_analyzer",
+      "label": "通过初筛",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-copilot-mem",
+      "from": "pi_copilot",
+      "to": "copilot_sessions",
+      "label": "会话持久化",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-copilot-sync",
+      "from": "pi_copilot",
+      "to": "profile_store",
+      "label": "STAR 提炼注入",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-tailor",
+      "from": "jd_analyzer",
+      "to": "resume_tailor",
+      "label": "洞察输出",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-tailor-profile",
+      "from": "profile_store",
+      "to": "resume_tailor",
+      "label": "经历对齐",
+      "variant": "dashed"
+    },
+    {
+      "id": "e-track",
+      "from": "resume_tailor",
+      "to": "job_tracker",
+      "label": "生成就绪",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e-feishu",
+      "from": "job_tracker",
+      "to": "feishu_card",
+      "label": "推送决策",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "双引擎协同：Workflow 守门 × Agent 推理",
+      "items": [
+        "Workflow：纯只读接入、防风控熔断、双休/时效/通勤/薪资硬性初筛、状态机去重流转",
+        "Agent：Pi 履历专家增量会话与压缩、JD 洞察识破风险、按痛点动态裁剪高转化话术",
+        "闭环：飞书卡片手机端一键决策 + Web 看板泳道追踪 + 3 分钟初始化向导"
+      ]
+    }
+  ]
+}

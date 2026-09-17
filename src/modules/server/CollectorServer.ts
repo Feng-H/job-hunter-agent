@@ -7,17 +7,20 @@ import { LlmClient } from '../ai/LlmClient.js';
 import { StandaloneJobHunter } from '../../standalone.js';
 import { AntiRiskEngine } from '../safety/AntiRiskEngine.js';
 import { PiSessionCopilot } from '../ai/PiSessionCopilot.js';
+import { OnboardingService } from '../onboarding/OnboardingService.js';
 
 export class CollectorServer {
   private server: http.Server | null = null;
   private agent: JobHunterCore;
   private port: number;
   private llmClient: LlmClient;
+  private onboardingService: OnboardingService;
 
   constructor(agent: JobHunterCore, port: number = 8765) {
     this.agent = agent;
     this.port = port;
     this.llmClient = new LlmClient();
+    this.onboardingService = new OnboardingService();
   }
 
   public start(): Promise<void> {
@@ -53,11 +56,111 @@ export class CollectorServer {
           return;
         }
 
+        // 2.5 静态页面：系统初始化与入职向导 (Onboarding)
+        if (pathname === '/onboarding') {
+          const obPath = path.resolve(process.cwd(), 'public/onboarding.html');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(fs.readFileSync(obPath));
+          return;
+        }
+
         // 3. 动态 JS
         if (pathname === '/bookmarklet.js') {
           const jsPath = path.resolve(process.cwd(), 'scripts/bookmarklet.js');
           res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
           res.end(fs.readFileSync(jsPath));
+          return;
+        }
+
+        // 3.5 API: 获取系统初始化状态
+        if (pathname === '/api/system/status') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 0, ...this.onboardingService.getSystemStatus() }));
+          return;
+        }
+
+        // 3.6 API: Onboarding 专属接口群
+        if (pathname.startsWith('/api/onboarding/')) {
+          let body = '';
+          req.on('data', c => body += c);
+          req.on('end', async () => {
+            try {
+              const data = body ? JSON.parse(body) : {};
+
+              // 3.6.1 测试指定 LLM 参数
+              if (pathname === '/api/onboarding/llm-test') {
+                const result = await this.onboardingService.testLlm(data);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ code: result.success ? 0 : -1, ...result }));
+                return;
+              }
+
+              // 3.6.2 从上传文件提取文本
+              if (pathname === '/api/onboarding/extract-file') {
+                const { fileBase64, fileName } = data;
+                if (!fileBase64 || !fileName) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ code: -1, error: '缺少文件数据' }));
+                  return;
+                }
+                const buffer = Buffer.from(fileBase64, 'base64');
+                const text = this.onboardingService.extractTextFromFile(buffer, fileName);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ code: 0, text }));
+                return;
+              }
+
+              // 3.6.3 调用 LLM 将文本简历解构为结构化 Profile
+              if (pathname === '/api/onboarding/parse-resume') {
+                const { text, llmConfig } = data;
+                if (!text || !text.trim()) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ code: -1, error: '简历内容不能为空' }));
+                  return;
+                }
+                const profile = await this.onboardingService.parseResumeWithLlm(text, llmConfig || this.llmClient.getConfig());
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ code: 0, profile }));
+                return;
+              }
+
+              // 3.6.4 AI 与用户进行 Onboarding 需求互动对齐
+              if (pathname === '/api/onboarding/align-chat') {
+                const { message, draftProfile, draftRules, history, llmConfig } = data;
+                const result = await this.onboardingService.alignWithUser(
+                  message,
+                  draftProfile,
+                  draftRules,
+                  history || [],
+                  llmConfig || this.llmClient.getConfig()
+                );
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ code: 0, ...result }));
+                return;
+              }
+
+              // 3.6.5 完成 Onboarding 初始化并点火启动
+              if (pathname === '/api/onboarding/complete') {
+                const { profile, rules, llmConfig } = data;
+                if (!profile || !rules) {
+                  res.writeHead(400, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ code: -1, error: '档案与规则数据不完整' }));
+                  return;
+                }
+                this.onboardingService.completeOnboarding(profile, rules, llmConfig || this.llmClient.getConfig());
+                this.agent.reloadConfig();
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ code: 0, message: '系统初始化就绪！已成功启动。' }));
+                return;
+              }
+
+              res.writeHead(404, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ code: -1, error: '未知的 Onboarding 接口' }));
+            } catch (e: any) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ code: -1, error: e.message }));
+            }
+          });
           return;
         }
 
@@ -240,16 +343,49 @@ export class CollectorServer {
               try {
                 const data = JSON.parse(body);
                 const current = JSON.parse(fs.readFileSync(prefPath, 'utf-8'));
-                if (data.salaryMin !== undefined) current.scenarios.onsite.salaryRange.min = data.salaryMin;
+
+                // 1. 工作模式
+                if (data.remoteEnabled !== undefined) current.scenarios.remote.enabled = Boolean(data.remoteEnabled);
+                if (data.onsiteEnabled !== undefined) current.scenarios.onsite.enabled = Boolean(data.onsiteEnabled);
+
+                // 2. 薪资底线
+                if (data.salaryMin !== undefined) {
+                  current.scenarios.onsite.salaryRange.min = data.salaryMin;
+                  if (current.scenarios.remote) current.scenarios.remote.salaryRange.min = data.salaryMin;
+                }
+                if (data.salaryMinRemote !== undefined && current.scenarios.remote) {
+                  current.scenarios.remote.salaryRange.min = data.salaryMinRemote;
+                }
+
+                // 3. 通勤与地点
                 if (data.commuteMax !== undefined) current.scenarios.onsite.maxCommuteMinutes = data.commuteMax;
                 if (data.homeBase !== undefined) current.scenarios.onsite.homeBase = data.homeBase;
                 if (data.targetCities !== undefined) current.scenarios.onsite.targetCities = data.targetCities;
-                if (data.doubleWeekend !== undefined) current.strictRules.mustDoubleWeekend = data.doubleWeekend;
+
+                // 4. 工作制与时效红线
+                if (data.doubleWeekend !== undefined) current.strictRules.mustDoubleWeekend = Boolean(data.doubleWeekend);
+                if (data.disallowedWorkSchedules !== undefined) current.strictRules.disallowedWorkSchedules = data.disallowedWorkSchedules;
+                if (data.maxStaleMonths !== undefined) current.strictRules.maxStaleMonths = data.maxStaleMonths;
+
+                // 5. 职能与赛道
+                if (data.targetRoles !== undefined) {
+                  current.scenarios.onsite.targetRoles = data.targetRoles;
+                  if (current.scenarios.remote) current.scenarios.remote.targetRoles = data.targetRoles;
+                }
+                if (data.targetDomains !== undefined) current.strictRules.targetDomains = data.targetDomains;
+
+                // 6. 排除与黑名单
                 if (data.excludeKeywords !== undefined) current.strictRules.excludeKeywords = data.excludeKeywords;
                 if (data.excludeCompanies !== undefined) current.strictRules.excludeCompanies = data.excludeCompanies;
+
+                // 7. 评分门槛
+                if (data.minScoreToNotify !== undefined) current.scoringThresholds.minScoreToNotify = data.minScoreToNotify;
+
                 fs.writeFileSync(prefPath, JSON.stringify(current, null, 2), 'utf-8');
+                this.agent.reloadConfig();
+
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ code: 0, message: '偏好已更新' }));
+                res.end(JSON.stringify({ code: 0, message: '求职偏好规则已更新并实时生效' }));
               } catch (e: any) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ code: -1, error: e.message }));
@@ -274,8 +410,9 @@ export class CollectorServer {
               try {
                 const data = JSON.parse(body);
                 fs.writeFileSync(profPath, JSON.stringify(data, null, 2), 'utf-8');
+                this.agent.reloadConfig();
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ code: 0, message: '主档案已更新' }));
+                res.end(JSON.stringify({ code: 0, message: '主档案已更新并实时生效' }));
               } catch (e: any) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ code: -1, error: e.message }));

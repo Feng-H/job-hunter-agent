@@ -135,8 +135,10 @@ export interface PreferenceRules {
   strictRules: {
     mustDoubleWeekend: boolean;
     disallowedWorkSchedules: string[];
+    maxStaleMonths?: number;        // 职位发布/活跃最大允许月数（默认 3，0 表示不限）
     excludeKeywords: string[];
     excludeCompanies: string[];
+    targetDomains?: string[];       // 期望行业领域赛道（如：AI, 智能制造, 互联网, 软件等）
   };
   scenarios: {
     remote: {

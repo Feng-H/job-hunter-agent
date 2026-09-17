@@ -4,100 +4,40 @@
 
 ---
 
-## 🏗️ 系统全景架构图 (Architecture Overview)
+## 🌟 核心特性
 
-```mermaid
-flowchart TB
-    subgraph S1["🌐 多源线索接入层 (Multi-Source Ingestion)"]
-        direction LR
-        A1["📌 一键书签采集<br/>(Chrome Bookmarklet)"]
-        A2["👀 被动只读监听<br/>(Mac Chrome / JXA)"]
-        A3["🏢 公开企业 ATS 门户<br/>(飞书/Moka/外企直聘)"]
-    end
+### 1. 🛡️ 零封号安全盾牌（AntiRiskEngine）
+* **100% 纯只读与被动模式**：彻底移除任何驱动浏览器跳转 URL、高频模拟点击等触发平台 WAF 的激进行为；
+* **主动熔断保护（Circuit Breaker）**：遇到验证码或频率限制，系统毫秒级切断抓取动作并推送休眠通知，绝不与反爬硬碰硬；
+* **拟人随机延时与配额控制**：每一步处理强制加入 3.5s ~ 7.5s 随机非匀速停顿，单平台单日限制处理 20 个岗位。
 
-    subgraph S2["🛡️ 账号安全与防风控中枢 (AntiRiskEngine)"]
-        direction TB
-        B1["⚡ 主动特征探测 (WAF / 403 / 验证码)"]
-        B2{"触发风控?"}
-        B3["🛑 毫秒级熔断休眠 (Circuit Breaker)<br/>& 飞书安全告警"]
-        B4["⏳ 拟人随机延时 (3.5s ~ 7.5s Jitter)"]
-        B5["📊 单平台每日 20 个配额限流"]
-        B1 --> B2
-        B2 -- 是 --> B3
-        B2 -- 否 --> B4 --> B5
-    end
+### 2. ⚖️ 严苛求职红线把关（JobFilter · 全参数可配置）
+* **周末严格双休**：单休、大小周、排班轮休一票否决（违规词可自定义）；
+* **岗位时效性审查**：仅处理近 N 个月（默认 3，可配 0=不限）内活跃发布的真实职位，拦截陈年僵尸岗位；
+* **个性化通勤路线规划**：自定义常住地起点与通勤上限，自动估算公共交通耗时，超标直接否决；
+* **负面场景黑名单**：驻场/驻厂/外派等关键词与企业黑名单动态排除。
 
-    subgraph S3["⚖️ 严苛求职规则初筛引擎 (JobFilter)"]
-        direction TB
-        C1["🕒 3个月发布与活跃度时效排查"]
-        C2["🏖️ 周末严格双休排查 (单休/大小周/轮休一票否决)"]
-        C3["🚇 自定义常住地通勤距离测算 (CommutePlanner)"]
-        C4["🚫 驻场/驻厂/外派/销售/公司黑名单过滤"]
-        C5["💰 期望薪资底线排查 (>= MinSalary)"]
-        C1 --> C2 --> C3 --> C4 --> C5
-    end
+### 3. 🧠 Pi Coding Agent 原生履历合伙人（Profile Copilot）
+* **增量推进（No Replay）**：告别传统应用将整段历史重复重放给大模型的低效做法，利用 Pi 原生 `session.prompt()` 纯增量推进；
+* **会话持久化**：历史对话直接存入 Pi 原生 `.jsonl` 树状结构，随开随续；
+* **语义智能压缩（Compaction）**：长对话自动浓缩精炼关键事实，降低 Token 消耗并规避长上下文遗忘；
+* **100% 严格事实依从（Strict Grounding）**：深度绑定个人主履历库，严禁大模型凭空捏造经历。
 
-    subgraph S4["📝 语义对齐与简历裁剪引擎 (ResumeTailor & LLM)"]
-        direction TB
-        D1[("👤 候选人全量档案库<br/>master_profile.json")]
-        D2["🔍 JD 技术栈与业务痛点解构"]
-        D3["✨ 经历动态权重重排 & STAR 亮点提取"]
-        D4["📄 生成针对性 Markdown 简历与定制打招呼话术"]
-        D1 --> D3
-        D2 --> D3 --> D4
-    end
+### 4. ✨ 三分钟初始化向导（Onboarding Wizard）
+* 访问 `/onboarding`：配置大模型 ➔ 上传现有简历（PDF 自动解构）➔ 设定意向与红线 ➔ 与 AI 对齐确认 ➔ 一键点火启动。
 
-    subgraph S5["🧠 Pi Agent 履历打磨助手 (PiSessionCopilot)"]
-        direction TB
-        E1["💬 Web 对话交互 (Markdown / 自适应大输入框)"]
-        E2["🌳 Pi 原生 AgentSession (增量推进 / 无重放)"]
-        E3["💾 Pi 会话持久化 (.jsonl)"]
-        E4["🗜️ Pi 原生语义压缩 (Compaction)"]
-        E1 <--> E2 <--> E3
-        E2 --> E4
-    end
-
-    subgraph S6["📲 交互与协作终端 (Human-in-the-Loop)"]
-        direction LR
-        F1["📱 飞书交互卡片推送<br/>(手机端一键同意/淘汰/修改)"]
-        F2["🖥️ 本地 Web 可视化看板<br/>(Kanban / 状态流转 / 设置中心)"]
-    end
-
-    %% 流程连接
-    S1 --> S2
-    B5 --> S3
-    S3 -- 淘汰 --> T1["📦 归档记录 (FILTERED_OUT)"]
-    S3 -- 通过初筛 --> S4
-    S4 --> F1
-    S4 --> F2
-    D1 <--> S5
-```
+### 5. 🌍 完全解耦、开箱即用（Zero Hardcoding）
+* 没有任何写死的人名、经历、公司或城市，所有行为由 `master_profile.json` 与 `rules.json` 动态驱动。
 
 ---
 
-## 🌟 核心特性与设计哲学
+## 🏗️ 系统架构
 
-### 1. 🛡️ 零封号安全盾牌（Passive & AntiRiskEngine）
-* **100% 纯只读与被动模式**：彻底移除任何驱动浏览器跳转 URL、高频模拟点击等触发平台 WAF 的激进行为；
-* **主动熔断保护（Circuit Breaker）**：遇到验证码或频率限制，系统毫秒级切断抓取动作并推送休眠通知，绝不与反爬硬碰硬；
-* **拟人随机延时与配额控制**：每一步处理强制加入 3.5s ~ 7.5s 随机非匀速停顿，单平台单日限制处理 20 个岗位，防止平台大数据标记。
+架构说明（Workflow 工作流 vs Agent 智能体的分工标注）已独立成篇：
 
-### 2. ⚖️ 严苛求职红线把关（JobFilter）
-* **周末严格双休**：单休、大小周、排班轮休一票否决；
-* **岗位时效性审查**：仅处理近 3 个月（90天）内活跃发布的真实职位，拦截陈年僵尸岗位；
-* **个性化通勤路线规划**：支持自定义常住地起点（如某某地铁站），自动估算公共交通耗时，超标直接否决；
-* **负面场景黑名单**：驻场/驻厂/常驻客户现场/外派异地直接淘汰，支持企业黑名单动态排除。
+👉 **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** —— 含模块级类型标注表与主干数据流
 
-### 3. 🧠 Pi Coding Agent 原生履历合伙人（Profile Copilot）
-* **基于 `@earendil-works/pi-coding-agent` 原生底座**：
-  * **增量推进（No Replay）**：告别传统应用将整段历史数组重复重放给大模型的低效做法，利用 Pi 原生 `session.prompt()` 纯增量推进；
-  * **会话持久化与分支追溯**：历史对话直接存入 Pi 原生 `.jsonl` 树状结构，随开随续；
-  * **语义智能压缩（Compaction）**：长对话自动浓缩精炼关键事实，降低 Token 消耗并规避长上下文遗忘；
-* **100% 严格事实依从（Strict Grounding）**：深度绑定个人主履历库，严禁大模型凭空捏造未任职过的第三方机构或虚假战绩。
-
-### 4. 🌍 完全解耦、开箱即用（Zero Hardcoding）
-* 没有任何写死的人名、经历、公司或城市，所有行为完全由 `master_profile.json` 与 `rules.json` 动态驱动；
-* 任何人克隆代码库，填入自己的履历与期望即可独立运行。
+👉 **[交互式架构图](./docs/architecture/job-hunter-os.html)** —— 下载后浏览器打开，支持明暗主题/节点追踪/演示动画（由 [Archify](https://github.com/tt-a1i/archify) 生成）
 
 ---
 
@@ -127,6 +67,8 @@ cp data/preferences/rules.example.json data/preferences/rules.json
 # 复制个人全量主档案模板（填入您真实的技能与经历）
 cp data/profile/master_profile.example.json data/profile/master_profile.json
 ```
+
+> 💡 也可以启动后直接打开 **[http://127.0.0.1:8765/onboarding](http://127.0.0.1:8765/onboarding)**，跟随 3 分钟向导完成全部配置（推荐）。
 
 * **`.env`**：填入兼容 OpenAI 规范的 API Key（支持 DeepSeek / Claude / Qwen / GLM 等）与飞书 Webhook；
 * **`data/profile/master_profile.json`**：填入个人真实履历（姓名、经历、项目亮点、技能栈）；
@@ -163,12 +105,12 @@ chmod +x job-hunter.sh
 
 ### 2. 👤 全量档案库与 AI 履历打磨助手
 * **左侧可视化卡片**：直观展示当前系统加载的个人全量履历，支持切换 JSON 源码直接修改；
-* **右侧 AI 打磨对话框**：
-  * 支持 Markdown 优雅渲染与多行自适应输入；
-  * 按 `Enter` 快捷发送，`Shift + Enter` 换行；
-  * 右上角配备 **`[🗜️ 压缩记忆]`** 与 **`[🗑️ 新会话]`** 控制按钮。
+* **右侧 AI 打磨对话框**：Markdown 优雅渲染、自适应大输入框（`Enter` 发送 / `Shift+Enter` 换行）、`🗜️ 压缩记忆` 与 `🗑️ 新会话` 一键控制。
 
-### 3. 📌 一键书签采集工具（Bookmarklet）
+### 3. ⚙️ 求职规则与硬性红线控制台
+* 工作模式开关（远程/现场）、目标城市、常住通勤起点、薪资底线、初筛门槛分、非双休违规词、时效月数、期望职位与行业赛道、排除关键词与企业黑名单——全部网页在线配置，保存即刻生效。
+
+### 4. 📌 一键书签采集工具（Bookmarklet）
 * 打开 **[http://127.0.0.1:8765/setup](http://127.0.0.1:8765/setup)**；
 * 将蓝色按钮拖拽到 Chrome 书签栏；
 * 在 Boss直聘、猎聘、智联等网站浏览搜索时，点击书签，当前页面的所有岗位即可无缝送入 Agent 自动完成初筛与飞书推送！
@@ -185,4 +127,4 @@ chmod +x job-hunter.sh
 
 ## 📄 开源许可证
 
-本项目基于 [MIT License](LICENSE) 开源。
+本项目基于 [MIT License](LICENSE) 开源。架构图由 [Archify](https://github.com/tt-a1i/archify)（MIT License）生成。
