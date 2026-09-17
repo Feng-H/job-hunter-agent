@@ -4400,6 +4400,18 @@ var CollectorServer = class {
       });
       return;
     }
+    if (req.method === "POST" && pathname === "/api/profile/chat/compact") {
+      if (isDemo) {
+        return sendJson(200, { code: 0, success: true, message: "\u3010\u6F14\u793A\u6A21\u5F0F\u3011\u4E0A\u4E0B\u6587\u538B\u7F29\u5DF2\u6A21\u62DF\u5B8C\u6210" });
+      }
+      try {
+        const copilot = PiSessionCopilot.getInstance();
+        const resData = await copilot.compactContext();
+        return sendJson(200, { code: 0, ...resData });
+      } catch (e) {
+        return sendJson(500, { code: -1, error: e.message });
+      }
+    }
     if (req.method === "POST" && pathname === "/api/collect") {
       if (isDemo) {
         return sendJson(401, { code: -1, message: "\u672A\u6388\u6743\uFF1A\u91C7\u96C6\u6269\u5C55\u9700\u8981\u643A\u5E26\u5408\u6CD5\u91C7\u96C6\u4EE4\u724C\u6216\u767B\u5F55\u7BA1\u7406\u5458\u8D26\u53F7" });
@@ -4504,6 +4516,17 @@ var CollectorServer = class {
     if (pathname === "/api/diag/storage") {
       const { getKvEnvConfig: getKvEnvConfig2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
       const kvCfg = getKvEnvConfig2();
+      if (isDemo) {
+        return sendJson(200, {
+          code: 0,
+          storageKind: getStorage().kind,
+          llmEnvPresence: {
+            LLM_API_KEY: Boolean(process.env.LLM_API_KEY),
+            LLM_BASE_URL: Boolean(process.env.LLM_BASE_URL),
+            LLM_MODEL: Boolean(process.env.LLM_MODEL)
+          }
+        });
+      }
       let kvDetail = { roundtrip: "skipped-local" };
       if (kvCfg) {
         try {

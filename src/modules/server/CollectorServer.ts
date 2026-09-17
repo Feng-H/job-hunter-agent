@@ -672,6 +672,8 @@ export class CollectorServer {
         return sendJson(500, { code: -1, error: e.message });
       }
     });
+      return;
+    }
 
     // 触发上下文压缩 (Compaction，仅管理员)
     if (req.method === 'POST' && pathname === '/api/profile/chat/compact') {
@@ -685,8 +687,6 @@ export class CollectorServer {
       } catch (e: any) {
         return sendJson(500, { code: -1, error: e.message });
       }
-    }
-      return;
     }
 
     // ============ 8. 书签/扩展采集 POST（必须授权） ============
