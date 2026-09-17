@@ -3,7 +3,7 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { JobHunterCore } from './index.js';
+import { JobHunterCore } from './core.js';
 import { JobPost } from './types/index.js';
 import { AntiRiskEngine } from './modules/safety/AntiRiskEngine.js';
 

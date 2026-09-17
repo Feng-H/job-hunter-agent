@@ -1,4 +1,4 @@
-import { JobHunterCore } from './index.js';
+import { JobHunterCore } from './core.js';
 import { CollectorServer } from './modules/server/CollectorServer.js';
 
 async function main() {

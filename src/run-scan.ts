@@ -1,4 +1,4 @@
-import { JobHunterCore } from './index.js';
+import { JobHunterCore } from './core.js';
 
 async function main() {
   console.log('⚡ 正在以【小批量精选模式】启动真实招聘扫描...');

@@ -1,5 +1,5 @@
 import { MacChromeController } from '../src/modules/browser/MacChromeController.js';
-import { JobHunterCore } from '../src/index.js';
+import { JobHunterCore } from '../src/core.js';
 
 async function scanViaMac() {
   const ctrl = new MacChromeController();

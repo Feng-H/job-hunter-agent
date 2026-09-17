@@ -1895,10 +1895,10 @@ var init_ChromePlatformScraper = __esm({
   }
 });
 
-// src/index.ts
+// src/core.ts
 var import_config2, fs5, path5, JobHunterCore;
-var init_index = __esm({
-  "src/index.ts"() {
+var init_core = __esm({
+  "src/core.ts"() {
     "use strict";
     import_config2 = require("dotenv/config");
     fs5 = __toESM(require("node:fs"));
@@ -2270,7 +2270,7 @@ var init_standalone = __esm({
     import_node_util = require("node:util");
     fs9 = __toESM(require("node:fs"));
     path9 = __toESM(require("node:path"));
-    init_index();
+    init_core();
     init_AntiRiskEngine();
     execAsync = (0, import_node_util.promisify)(import_node_child_process2.exec);
     StandaloneJobHunter = class {
@@ -2440,7 +2440,7 @@ module.exports = __toCommonJS(api_entry_exports);
 var http = __toESM(require("node:http"));
 var fs10 = __toESM(require("node:fs"));
 var path10 = __toESM(require("node:path"));
-init_index();
+init_core();
 init_LlmClient();
 init_AntiRiskEngine();
 

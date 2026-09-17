@@ -1,5 +1,5 @@
 import { CollectorServer } from '../src/modules/server/CollectorServer.js';
-import { JobHunterCore } from '../src/index.js';
+import { JobHunterCore } from '../src/core.js';
 
 async function runTests() {
   const testPort = 8799;

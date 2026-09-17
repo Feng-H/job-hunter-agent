@@ -1,4 +1,4 @@
-import { JobHunterCore } from '../src/index.js';
+import { JobHunterCore } from '../src/core.js';
 import { JobPost } from '../src/types/index.js';
 
 async function main() {

@@ -6,8 +6,7 @@
     "scan": "tsx scripts/scan-mac.ts",
     "dev": "tsx src/server.ts",
     "server": "tsx src/server.ts",
-    "build": "tsc && node scripts/build-api.mjs && rm -rf dist",
-    "start": "node dist/server.js"
+    "build": "tsc && node scripts/build-api.mjs && rm -rf dist"
   },
   "keywords": [
     "job-hunter",
