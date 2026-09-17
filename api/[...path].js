@@ -4500,31 +4500,33 @@ var CollectorServer = class {
     if (pathname === "/api/diag/storage") {
       const { getKvEnvConfig: getKvEnvConfig2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
       const kvCfg = getKvEnvConfig2();
-      let kvRoundtrip = "skipped-local";
+      let kvDetail = { roundtrip: "skipped-local" };
       if (kvCfg) {
         try {
-          await writeJson("data/diag/storage_probe", { t: Date.now() });
-          const back = await readJson("data/diag/storage_probe", { t: 0 });
-          kvRoundtrip = back.t > 0 ? "ok" : "write-lost";
+          const probeKey = `diag/storage_probe_${Date.now()}`;
+          const wResp = await fetch(`${kvCfg.url}/set/${encodeURIComponent(probeKey)}`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${kvCfg.token}`, "Content-Type": "text/plain" },
+            body: "ping"
+          });
+          const wBody = (await wResp.text()).slice(0, 80);
+          const rResp = await fetch(`${kvCfg.url}/get/${encodeURIComponent(probeKey)}`, {
+            headers: { Authorization: `Bearer ${kvCfg.token}` }
+          });
+          const rBody = (await rResp.text()).slice(0, 120);
+          kvDetail = { wStatus: wResp.status, wBody, rStatus: rResp.status, rBody };
         } catch (e) {
-          kvRoundtrip = `error: ${e.message}`;
+          kvDetail = { roundtrip: `error: ${e.message}` };
         }
       }
       return sendJson(200, {
         code: 0,
         storageKind: getStorage().kind,
         kvSource: kvCfg?.source || null,
-        envPresence: {
-          KV_REST_API_URL: Boolean(process.env.KV_REST_API_URL),
-          KV_REST_API_TOKEN: Boolean(process.env.KV_REST_API_TOKEN),
-          UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
-          UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
-        },
-        // 命中带前缀变量时列出其变量名（仅名字）
         prefixedKvVars: Object.keys(process.env).filter(
           (k) => /KV_REST_API_URL$|UPSTASH_REDIS_REST_URL$/.test(k) && k !== "KV_REST_API_URL" && k !== "UPSTASH_REDIS_REST_URL"
         ),
-        kvRoundtrip
+        kvDetail
       });
     }
     const publicStaticPath = path10.resolve(process.cwd(), "public", pathname.replace(/^\/+/, ""));
