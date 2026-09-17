@@ -13,8 +13,19 @@ export interface StorageAdapter {
   write(key: string, content: string): Promise<void>;
 }
 
+/** 兼容两套环境变量命名：Vercel KV 集成 (KV_REST_API_*) 与 Upstash 官方集成 (UPSTASH_REDIS_REST_*) */
+export function getKvEnvConfig(): { url: string; token: string; source: string } | null {
+  const url1 = process.env.KV_REST_API_URL;
+  const token1 = process.env.KV_REST_API_TOKEN;
+  if (url1 && token1) return { url: url1, token: token1, source: 'KV_REST_API_*' };
+  const url2 = process.env.UPSTASH_REDIS_REST_URL;
+  const token2 = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url2 && token2) return { url: url2, token: token2, source: 'UPSTASH_REDIS_REST_*' };
+  return null;
+}
+
 export function isCloudRuntime(): boolean {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return getKvEnvConfig() !== null;
 }
 
 class LocalFileStorage implements StorageAdapter {
@@ -43,8 +54,10 @@ class VercelKVStorage implements StorageAdapter {
   private token: string;
 
   constructor() {
-    this.baseUrl = (process.env.KV_REST_API_URL || '').replace(/\/+$/, '');
-    this.token = process.env.KV_REST_API_TOKEN || '';
+    const cfg = getKvEnvConfig();
+    if (!cfg) throw new Error('KV env vars missing');
+    this.baseUrl = cfg.url.replace(/\/+$/, '');
+    this.token = cfg.token;
   }
 
   async read(key: string): Promise<string | null> {

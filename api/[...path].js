@@ -31,8 +31,17 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/storage/index.ts
+function getKvEnvConfig() {
+  const url1 = process.env.KV_REST_API_URL;
+  const token1 = process.env.KV_REST_API_TOKEN;
+  if (url1 && token1) return { url: url1, token: token1, source: "KV_REST_API_*" };
+  const url2 = process.env.UPSTASH_REDIS_REST_URL;
+  const token2 = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url2 && token2) return { url: url2, token: token2, source: "UPSTASH_REDIS_REST_*" };
+  return null;
+}
 function isCloudRuntime() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return getKvEnvConfig() !== null;
 }
 function getStorage() {
   if (!singleton) {
@@ -81,8 +90,10 @@ var init_storage = __esm({
       baseUrl;
       token;
       constructor() {
-        this.baseUrl = (process.env.KV_REST_API_URL || "").replace(/\/+$/, "");
-        this.token = process.env.KV_REST_API_TOKEN || "";
+        const cfg = getKvEnvConfig();
+        if (!cfg) throw new Error("KV env vars missing");
+        this.baseUrl = cfg.url.replace(/\/+$/, "");
+        this.token = cfg.token;
       }
       async read(key) {
         const resp = await fetch(`${this.baseUrl}/get/${encodeURIComponent(key)}`, {
@@ -4467,6 +4478,18 @@ var CollectorServer = class {
       res.writeHead(200, { "Content-Type": "text/plain" });
       res.end("Job Hunter Server is healthy");
       return;
+    }
+    if (pathname === "/api/diag/storage") {
+      return sendJson(200, {
+        code: 0,
+        storageKind: getStorage().kind,
+        envPresence: {
+          KV_REST_API_URL: Boolean(process.env.KV_REST_API_URL),
+          KV_REST_API_TOKEN: Boolean(process.env.KV_REST_API_TOKEN),
+          UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+          UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
+        }
+      });
     }
     const publicStaticPath = path10.resolve(process.cwd(), "public", pathname.replace(/^\/+/, ""));
     if (fs10.existsSync(publicStaticPath) && !fs10.statSync(publicStaticPath).isDirectory()) {

@@ -11,7 +11,7 @@ import { AuthService } from '../auth/AuthService.js';
 import { DEMO_JOBS, DEMO_PROFILE, getDemoAiAnalysis, getDemoTailoredResume } from '../demo/DemoData.js';
 import { RegionalCareerRadar, RegionalCompanyPortal, PRESET_REGIONAL_PORTALS } from '../discovery/RegionalCareerRadar.js';
 import { CompanyResolver, ExtendedJobPost } from '../discovery/CompanyResolver.js';
-import { readJson, writeJson } from '../../storage/index.js';
+import { readJson, writeJson, getStorage } from '../../storage/index.js';
 
 const SESSION_COOKIE = 'jobhunter_session';
 
@@ -792,6 +792,20 @@ export class CollectorServer {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end('Job Hunter Server is healthy');
       return;
+    }
+
+    // 存储诊断：只报告变量名是否存在与当前存储模式，绝不返回任何密钥值
+    if (pathname === '/api/diag/storage') {
+      return sendJson(200, {
+        code: 0,
+        storageKind: getStorage().kind,
+        envPresence: {
+          KV_REST_API_URL: Boolean(process.env.KV_REST_API_URL),
+          KV_REST_API_TOKEN: Boolean(process.env.KV_REST_API_TOKEN),
+          UPSTASH_REDIS_REST_URL: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+          UPSTASH_REDIS_REST_TOKEN: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN)
+        }
+      });
     }
 
     // 静态资源回退（如果 public 目录下存在对应静态文件）
