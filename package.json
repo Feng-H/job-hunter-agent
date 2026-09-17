@@ -3,12 +3,11 @@
   "version": "1.0.0",
   "description": "Intelligent Job Hunter Agent powered by Pi & Feishu",
   "type": "module",
-  "main": "dist/index.js",
   "scripts": {
     "scan": "tsx scripts/scan-mac.ts",
     "dev": "tsx src/server.ts",
     "server": "tsx src/server.ts",
-    "build": "tsc && node scripts/build-api.mjs",
+    "build": "tsc && node scripts/build-api.mjs && rm -rf dist",
     "start": "node dist/server.js"
   },
   "keywords": [
