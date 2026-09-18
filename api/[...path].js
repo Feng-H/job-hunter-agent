@@ -2072,9 +2072,12 @@ var init_core = __esm({
           if (verdict.passed) {
             this.tracker.updateStatus(record.job.id, "PENDING_REVIEW", `\u6309\u6700\u65B0\u89C4\u5219\u91CD\u7B5B\u901A\u8FC7\uFF08\u8BC4\u5206 ${verdict.score}\uFF09`, { filterResult: verdict });
             promoted++;
-          } else {
+          } else if (verdict.hardFailed) {
             this.tracker.updateStatus(record.job.id, "FILTERED_OUT", verdict.reasons.join("\uFF1B"), { filterResult: verdict });
             stillRejected++;
+          } else {
+            this.tracker.updateStatus(record.job.id, "PENDING_REVIEW", `\u7EFC\u5408\u5951\u5408\u5EA6 ${verdict.score} \u5206\u4F4E\u4E8E\u63A8\u9001\u95E8\u69DB\uFF08\u672A\u89E6\u53D1\u7EA2\u7EBF\uFF09\uFF0C\u5F85\u4EBA\u5DE5\u590D\u6838`, { filterResult: verdict });
+            promoted++;
           }
         }
         return { rechecked, promoted, stillRejected };

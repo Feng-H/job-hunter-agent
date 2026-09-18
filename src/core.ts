@@ -87,9 +87,13 @@ export class JobHunterCore {
       if (verdict.passed) {
         this.tracker.updateStatus(record.job.id, 'PENDING_REVIEW', `按最新规则重筛通过（评分 ${verdict.score}）`, { filterResult: verdict });
         promoted++;
-      } else {
+      } else if (verdict.hardFailed) {
         this.tracker.updateStatus(record.job.id, 'FILTERED_OUT', verdict.reasons.join('；'), { filterResult: verdict });
         stillRejected++;
+      } else {
+        // 未触发硬红线，仅评分未达推送门槛：留在看板待人工复核
+        this.tracker.updateStatus(record.job.id, 'PENDING_REVIEW', `综合契合度 ${verdict.score} 分低于推送门槛（未触发红线），待人工复核`, { filterResult: verdict });
+        promoted++;
       }
     }
     return { rechecked, promoted, stillRejected };
