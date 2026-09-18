@@ -98,6 +98,7 @@ export class JobFilter {
       if (isStale) {
         return {
           passed: false,
+          hardFailed: true,
           score: 0,
           reasons: [`触发时效红线：岗位更新时间为「${timeStr}」，超过 ${maxStaleMonths} 个月未更新，判定为僵尸挂牌岗位`],
           breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -113,6 +114,7 @@ export class JobFilter {
         if (disallowed && textToScan.includes(disallowed.toLowerCase())) {
           return {
             passed: false,
+          hardFailed: true,
             score: 0,
             reasons: [`触发工作制红线：工作制包含非双休关键词「${disallowed}」`],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -126,6 +128,7 @@ export class JobFilter {
       if (kw && textToScan.includes(kw.toLowerCase())) {
         return {
           passed: false,
+          hardFailed: true,
           score: 0,
           reasons: [`触发硬性红线：包含禁止工作形式「${kw}」`],
           breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -138,6 +141,7 @@ export class JobFilter {
       if (comp && job.company.toLowerCase().includes(comp.toLowerCase())) {
         return {
           passed: false,
+          hardFailed: true,
           score: 0,
           reasons: [`触发企业黑名单红线：企业命中屏蔽名单「${comp}」`],
           breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -151,6 +155,7 @@ export class JobFilter {
         if (job.company.toLowerCase().includes(comp.toLowerCase())) {
           return {
             passed: false,
+          hardFailed: true,
             score: 0,
             reasons: [`触发用户历史屏蔽公司规则：「${comp}」`],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -161,6 +166,7 @@ export class JobFilter {
         if (textToScan.includes(kw.toLowerCase())) {
           return {
             passed: false,
+          hardFailed: true,
             score: 0,
             reasons: [`触发用户历史负向关键词：「${kw}」`],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -187,6 +193,7 @@ export class JobFilter {
       } else {
         return {
           passed: false,
+          hardFailed: true,
           score: 10,
           reasons: ['工作模式不符：当前为远程岗位，但配置未启用远程办公'],
           breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -203,6 +210,7 @@ export class JobFilter {
         if (!commute.isFeasible) {
           return {
             passed: false,
+          hardFailed: true,
             score: 0,
             reasons: [`触发通勤红线：距离起点【${homeBase}】单程超出 ${maxCommute} 分钟（${commute.transitSummary}）`],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -212,6 +220,7 @@ export class JobFilter {
       } else {
         return {
           passed: false,
+          hardFailed: true,
           score: 10,
           reasons: [`地点不符：当前为「${job.city}」，线下只考虑【${targetCities.join('、')}】本地`],
           breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -220,6 +229,7 @@ export class JobFilter {
     } else {
       return {
         passed: false,
+          hardFailed: true,
         score: 0,
         reasons: ['工作模式不符：未启用任何符合该岗位的求职场景（远程或线下）'],
         breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -234,6 +244,7 @@ export class JobFilter {
     if (job.salaryMax && job.salaryMax < minSalaryExpected) {
       return {
         passed: false,
+          hardFailed: true,
         score: 30,
         reasons: [`薪资不符：最高月薪 ${job.salaryMax} 元低于期望底线 ${minSalaryExpected} 元`],
         breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -323,6 +334,7 @@ export class JobFilter {
 
     return {
       passed,
+      hardFailed: false,
       score: totalScore,
       matchedScenario,
       reasons,

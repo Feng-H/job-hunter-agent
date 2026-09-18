@@ -701,6 +701,7 @@ var init_JobFilter = __esm({
           if (isStale) {
             return {
               passed: false,
+              hardFailed: true,
               score: 0,
               reasons: [`\u89E6\u53D1\u65F6\u6548\u7EA2\u7EBF\uFF1A\u5C97\u4F4D\u66F4\u65B0\u65F6\u95F4\u4E3A\u300C${timeStr}\u300D\uFF0C\u8D85\u8FC7 ${maxStaleMonths} \u4E2A\u6708\u672A\u66F4\u65B0\uFF0C\u5224\u5B9A\u4E3A\u50F5\u5C38\u6302\u724C\u5C97\u4F4D`],
               breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -714,6 +715,7 @@ var init_JobFilter = __esm({
             if (disallowed && textToScan.includes(disallowed.toLowerCase())) {
               return {
                 passed: false,
+                hardFailed: true,
                 score: 0,
                 reasons: [`\u89E6\u53D1\u5DE5\u4F5C\u5236\u7EA2\u7EBF\uFF1A\u5DE5\u4F5C\u5236\u5305\u542B\u975E\u53CC\u4F11\u5173\u952E\u8BCD\u300C${disallowed}\u300D`],
                 breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -725,6 +727,7 @@ var init_JobFilter = __esm({
           if (kw && textToScan.includes(kw.toLowerCase())) {
             return {
               passed: false,
+              hardFailed: true,
               score: 0,
               reasons: [`\u89E6\u53D1\u786C\u6027\u7EA2\u7EBF\uFF1A\u5305\u542B\u7981\u6B62\u5DE5\u4F5C\u5F62\u5F0F\u300C${kw}\u300D`],
               breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -735,6 +738,7 @@ var init_JobFilter = __esm({
           if (comp && job.company.toLowerCase().includes(comp.toLowerCase())) {
             return {
               passed: false,
+              hardFailed: true,
               score: 0,
               reasons: [`\u89E6\u53D1\u4F01\u4E1A\u9ED1\u540D\u5355\u7EA2\u7EBF\uFF1A\u4F01\u4E1A\u547D\u4E2D\u5C4F\u853D\u540D\u5355\u300C${comp}\u300D`],
               breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -746,6 +750,7 @@ var init_JobFilter = __esm({
             if (job.company.toLowerCase().includes(comp.toLowerCase())) {
               return {
                 passed: false,
+                hardFailed: true,
                 score: 0,
                 reasons: [`\u89E6\u53D1\u7528\u6237\u5386\u53F2\u5C4F\u853D\u516C\u53F8\u89C4\u5219\uFF1A\u300C${comp}\u300D`],
                 breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -756,6 +761,7 @@ var init_JobFilter = __esm({
             if (textToScan.includes(kw.toLowerCase())) {
               return {
                 passed: false,
+                hardFailed: true,
                 score: 0,
                 reasons: [`\u89E6\u53D1\u7528\u6237\u5386\u53F2\u8D1F\u5411\u5173\u952E\u8BCD\uFF1A\u300C${kw}\u300D`],
                 breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -775,6 +781,7 @@ var init_JobFilter = __esm({
           } else {
             return {
               passed: false,
+              hardFailed: true,
               score: 10,
               reasons: ["\u5DE5\u4F5C\u6A21\u5F0F\u4E0D\u7B26\uFF1A\u5F53\u524D\u4E3A\u8FDC\u7A0B\u5C97\u4F4D\uFF0C\u4F46\u914D\u7F6E\u672A\u542F\u7528\u8FDC\u7A0B\u529E\u516C"],
               breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -790,6 +797,7 @@ var init_JobFilter = __esm({
             if (!commute.isFeasible) {
               return {
                 passed: false,
+                hardFailed: true,
                 score: 0,
                 reasons: [`\u89E6\u53D1\u901A\u52E4\u7EA2\u7EBF\uFF1A\u8DDD\u79BB\u8D77\u70B9\u3010${homeBase}\u3011\u5355\u7A0B\u8D85\u51FA ${maxCommute} \u5206\u949F\uFF08${commute.transitSummary}\uFF09`],
                 breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -799,6 +807,7 @@ var init_JobFilter = __esm({
           } else {
             return {
               passed: false,
+              hardFailed: true,
               score: 10,
               reasons: [`\u5730\u70B9\u4E0D\u7B26\uFF1A\u5F53\u524D\u4E3A\u300C${job.city}\u300D\uFF0C\u7EBF\u4E0B\u53EA\u8003\u8651\u3010${targetCities.join("\u3001")}\u3011\u672C\u5730`],
               breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -807,6 +816,7 @@ var init_JobFilter = __esm({
         } else {
           return {
             passed: false,
+            hardFailed: true,
             score: 0,
             reasons: ["\u5DE5\u4F5C\u6A21\u5F0F\u4E0D\u7B26\uFF1A\u672A\u542F\u7528\u4EFB\u4F55\u7B26\u5408\u8BE5\u5C97\u4F4D\u7684\u6C42\u804C\u573A\u666F\uFF08\u8FDC\u7A0B\u6216\u7EBF\u4E0B\uFF09"],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -816,6 +826,7 @@ var init_JobFilter = __esm({
         if (job.salaryMax && job.salaryMax < minSalaryExpected) {
           return {
             passed: false,
+            hardFailed: true,
             score: 30,
             reasons: [`\u85AA\u8D44\u4E0D\u7B26\uFF1A\u6700\u9AD8\u6708\u85AA ${job.salaryMax} \u5143\u4F4E\u4E8E\u671F\u671B\u5E95\u7EBF ${minSalaryExpected} \u5143`],
             breakdown: { skillMatch: 0, experienceMatch: 0, scheduleAndBenefits: 0, growthAndDomain: 0 }
@@ -889,6 +900,7 @@ var init_JobFilter = __esm({
         }
         return {
           passed,
+          hardFailed: false,
           score: totalScore,
           matchedScenario,
           reasons,
@@ -2086,10 +2098,15 @@ var init_core = __esm({
           return { approved: false, reason: "\u516C\u53F8\u51B7\u5374\u671F" };
         }
         const filterResult = this.filter.evaluate(job, this.profile, this.memoryManager.getMemory());
-        if (!filterResult.passed) {
+        if (!filterResult.passed && filterResult.hardFailed) {
           console.log(`\u274C [\u8FC7\u6EE4\u6DD8\u6C70] [${job.company}] ${job.title} | \u5F97\u5206: ${filterResult.score} | \u539F\u56E0: ${filterResult.reasons.join("; ")}`);
           this.tracker.updateStatus(job.id, "FILTERED_OUT", filterResult.reasons.join("; "), { filterResult });
           return { approved: false, reason: filterResult.reasons.join("; ") };
+        }
+        if (!filterResult.passed) {
+          console.log(`\u{1F7E1} [\u4F4E\u5206\u5F85\u590D\u6838] [${job.company}] ${job.title} | \u5F97\u5206: ${filterResult.score} | \u672A\u89E6\u53D1\u7EA2\u7EBF`);
+          this.tracker.updateStatus(job.id, "PENDING_REVIEW", `\u7EFC\u5408\u5951\u5408\u5EA6 ${filterResult.score} \u5206\u672A\u8FBE\u63A8\u9001\u95E8\u69DB\uFF08\u672A\u89E6\u53D1\u786C\u7EA2\u7EBF\uFF09\uFF0C\u5DF2\u4FDD\u7559\u770B\u677F\u5F85\u4EBA\u5DE5\u590D\u6838`, { filterResult });
+          return { approved: false, reason: "\u4F4E\u5206\u5F85\u590D\u6838\uFF08\u672A\u89E6\u53D1\u7EA2\u7EBF\uFF0C\u4E0D\u63A8\u9001\uFF09" };
         }
         console.log(`\u2705 [\u5B8C\u7F8E\u5339\u914D] [${job.company}] ${job.title} | \u7EFC\u5408\u5F97\u5206: ${filterResult.score} \u5206\uFF01`);
         const tailoredResume = await this.tailor.generateTailoredResumeAsync(job, this.profile, this.memoryManager.getMemory());
@@ -2152,9 +2169,14 @@ var init_core = __esm({
             continue;
           }
           const filterResult = this.filter.evaluate(job, this.profile, this.memoryManager.getMemory());
-          if (!filterResult.passed) {
+          if (!filterResult.passed && filterResult.hardFailed) {
             console.log(`\u274C [\u8FC7\u6EE4\u6DD8\u6C70] [${job.company}] ${job.title} | \u5F97\u5206: ${filterResult.score} | \u539F\u56E0: ${filterResult.reasons.join("; ")}`);
             this.tracker.updateStatus(job.id, "FILTERED_OUT", filterResult.reasons.join("; "), { filterResult });
+            continue;
+          }
+          if (!filterResult.passed) {
+            console.log(`\u{1F7E1} [\u4F4E\u5206\u5F85\u590D\u6838] [${job.company}] ${job.title} | \u5F97\u5206: ${filterResult.score}`);
+            this.tracker.updateStatus(job.id, "PENDING_REVIEW", `\u7EFC\u5408\u5951\u5408\u5EA6 ${filterResult.score} \u5206\u672A\u8FBE\u63A8\u9001\u95E8\u69DB\uFF08\u672A\u89E6\u53D1\u786C\u7EA2\u7EBF\uFF09\uFF0C\u5DF2\u4FDD\u7559\u770B\u677F\u5F85\u4EBA\u5DE5\u590D\u6838`, { filterResult });
             continue;
           }
           console.log(`\u2705 [\u5339\u914D\u8FBE\u6807] [${job.company}] ${job.title} | \u7EFC\u5408\u5F97\u5206: ${filterResult.score} \u5206\uFF01`);

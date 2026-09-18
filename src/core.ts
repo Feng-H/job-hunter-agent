@@ -121,10 +121,17 @@ export class JobHunterCore {
 
     // 3. 严格规则过滤与智能评分（时效3个月 + 双休 + 松雅湖通勤1.5h + 薪资15K+）
     const filterResult = this.filter.evaluate(job, this.profile, this.memoryManager.getMemory());
-    if (!filterResult.passed) {
+    if (!filterResult.passed && filterResult.hardFailed) {
       console.log(`❌ [过滤淘汰] [${job.company}] ${job.title} | 得分: ${filterResult.score} | 原因: ${filterResult.reasons.join('; ')}`);
       this.tracker.updateStatus(job.id, 'FILTERED_OUT', filterResult.reasons.join('; '), { filterResult });
       return { approved: false, reason: filterResult.reasons.join('; ') };
+    }
+
+    if (!filterResult.passed) {
+      // 未触发任何硬红线，仅综合评分未达推送门槛：留在看板待人工复核（不消耗 LLM 裁剪与飞书推送）
+      console.log(`🟡 [低分待复核] [${job.company}] ${job.title} | 得分: ${filterResult.score} | 未触发红线`);
+      this.tracker.updateStatus(job.id, 'PENDING_REVIEW', `综合契合度 ${filterResult.score} 分未达推送门槛（未触发硬红线），已保留看板待人工复核`, { filterResult });
+      return { approved: false, reason: '低分待复核（未触发红线，不推送）' };
     }
 
     console.log(`✅ [完美匹配] [${job.company}] ${job.title} | 综合得分: ${filterResult.score} 分！`);
@@ -219,9 +226,16 @@ export class JobHunterCore {
 
       // 4. 硬指标过滤与匹配度评分
       const filterResult = this.filter.evaluate(job, this.profile, this.memoryManager.getMemory());
-      if (!filterResult.passed) {
+      if (!filterResult.passed && filterResult.hardFailed) {
         console.log(`❌ [过滤淘汰] [${job.company}] ${job.title} | 得分: ${filterResult.score} | 原因: ${filterResult.reasons.join('; ')}`);
         this.tracker.updateStatus(job.id, 'FILTERED_OUT', filterResult.reasons.join('; '), { filterResult });
+        continue;
+      }
+
+      if (!filterResult.passed) {
+        // 未触发硬红线，仅评分未达推送门槛：留在看板待人工复核
+        console.log(`🟡 [低分待复核] [${job.company}] ${job.title} | 得分: ${filterResult.score}`);
+        this.tracker.updateStatus(job.id, 'PENDING_REVIEW', `综合契合度 ${filterResult.score} 分未达推送门槛（未触发硬红线），已保留看板待人工复核`, { filterResult });
         continue;
       }
 

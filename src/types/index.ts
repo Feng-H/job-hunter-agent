@@ -102,6 +102,7 @@ export interface CompanyResolution {
 
 export interface FilterResult {
   passed: boolean;
+  hardFailed?: boolean;           // true=触发硬红线(地点/双休/薪资/黑名单等，直接淘汰)；false/缺省=仅综合评分未达推送门槛(留板待复核)
   score: number;                   // 0 - 100
   matchedScenario?: string;        // 'remote' | 'onsite'
   reasons: string[];               // 匹配理由或淘汰理由
