@@ -77,6 +77,7 @@ export class JobHunterCore {
    */
   public async refilterAllJobs(): Promise<{ rechecked: number; promoted: number; stillRejected: number }> {
     await this.reloadConfig();
+    await this.tracker.reload(); // 丢弃可能过期的实例内存快照，以 KV 最新数据为准重判
     const memory = this.memoryManager.getMemory();
     let rechecked = 0, promoted = 0, stillRejected = 0;
 

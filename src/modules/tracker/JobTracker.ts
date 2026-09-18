@@ -17,6 +17,15 @@ export class JobTracker {
     await this.ready;
   }
 
+  /**
+   * 强制从存储层重载最新数据（丢弃本实例内存快照）。
+   * 云端多实例并发时防"旧快照整体覆盖新结果"：关键写操作（批量重筛/采集批处理）前必须调用。
+   */
+  public async reload(): Promise<void> {
+    await this.ready;
+    await this.load();
+  }
+
   private async load(): Promise<void> {
     const list = await readJson<TrackedJobRecord[]>(this.dbKey, []);
     this.records = new Map(list.map(r => [r.job.id, r]));

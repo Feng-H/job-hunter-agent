@@ -195,6 +195,14 @@ var init_JobTracker = __esm({
       async ensureReady() {
         await this.ready;
       }
+      /**
+       * 强制从存储层重载最新数据（丢弃本实例内存快照）。
+       * 云端多实例并发时防"旧快照整体覆盖新结果"：关键写操作（批量重筛/采集批处理）前必须调用。
+       */
+      async reload() {
+        await this.ready;
+        await this.load();
+      }
       async load() {
         const list = await readJson(this.dbKey, []);
         this.records = new Map(list.map((r2) => [r2.job.id, r2]));
@@ -2063,6 +2071,7 @@ var init_core = __esm({
        */
       async refilterAllJobs() {
         await this.reloadConfig();
+        await this.tracker.reload();
         const memory = this.memoryManager.getMemory();
         let rechecked = 0, promoted = 0, stillRejected = 0;
         for (const record of this.tracker.getAllRecords()) {
@@ -44530,6 +44539,7 @@ var CollectorServer = class {
           let headhunterCount = 0;
           let storedOnlyCount = 0;
           const tracker = this.agent.tracker;
+          await tracker.reload?.();
           const safety = new AntiRiskEngine();
           for (const job of jobs) {
             if (job.detailCaptured) detailCount++;

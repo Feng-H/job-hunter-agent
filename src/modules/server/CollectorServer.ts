@@ -760,6 +760,7 @@ export class CollectorServer {
           let storedOnlyCount = 0;
 
           const tracker = (this.agent as any).tracker;
+          await tracker.reload?.(); // 批处理前重载 KV 最新数据，防多实例旧快照互相覆盖
           const safety = new AntiRiskEngine();
 
           for (const job of jobs) {
