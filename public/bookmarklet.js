@@ -78,35 +78,99 @@
     });
   }
 
-  // 3. 智联招聘提取器
+  // 3. 智联招聘提取器（新版 www.zhaopin.com/jobs 推荐/搜索流 + 老版兼容）
   else if (host.includes('zhaopin.com')) {
-    const cards = document.querySelectorAll('.joblist-box__item, .positionlist__list');
-    cards.forEach(card => {
-      try {
-        const titleEl = card.querySelector('.iteminfo__top__job__title');
-        const compEl = card.querySelector('.iteminfo__top__company__title');
-        const salaryEl = card.querySelector('.iteminfo__top__job__salary');
-        const areaEl = card.querySelector('.iteminfo__top__job__area');
-        const linkEl = card.querySelector('a');
-
-        if (titleEl && compEl && linkEl) {
-          const href = linkEl.getAttribute('href');
+    // 通道 1（最优）：新版 SPA 全局状态 __INITIAL_STATE__.positionList —— 结构化数据带详情URL/真实薪资/发布时间
+    try {
+      const st = window.__INITIAL_STATE__;
+      const list = st && Array.isArray(st.positionList) ? st.positionList : [];
+      list.forEach(item => {
+        try {
+          if (!item || !item.name || !item.companyName) return;
+          const url = (item.positionURL || item.positionUrl || '').replace(/^http:/, 'https:')
+            || `https://www.zhaopin.com/jobdetail/${item.number || ''}.htm`;
+          const isHeadhunter = /猎头|人力资源|人才咨询|人才服务/.test(
+            String(item.companyName || '') + String(item.industryName || '') + String(item.cardCustomJson || ''));
+          const tags = [item.education, item.workingExp, item.workType].filter(Boolean).join(' / ');
           jobs.push({
-            id: 'zhaopin_' + btoa(unescape(encodeURIComponent(href))).substring(0, 16),
-            title: titleEl.innerText.trim(),
-            company: compEl.innerText.trim(),
-            city: areaEl ? areaEl.innerText.trim() : '长沙',
+            id: 'zhaopin_' + (item.number || btoa(unescape(encodeURIComponent(url))).substring(0, 16)),
+            title: String(item.name).replace(/\+.*(?:五险|公积金|双休|年终|带薪|补贴|餐补|包吃|包住|住宿|体检).+$/, '').trim() || item.name,
+            company: item.companyName,
+            city: item.workCity || '未知',
             workMode: 'ONSITE',
-            salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
-            description: `智联在招职位：${titleEl.innerText.trim()}`,
-            url: href,
+            salaryText: item.salary60 || item.salaryReal || '面议',
+            description: `智联在招职位：${item.name}｜${tags}｜行业:${item.industryName || '未知'}`,
+            url: url,
             platform: 'ZHAOPIN',
-            publishOrActiveTime: '近期发布',
+            sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
+            publishOrActiveTime: item.publishTime || item.firstPublishTime || '近期发布',
             discoveredAt: new Date().toISOString()
           });
-        }
-      } catch (e) {}
-    });
+        } catch (e) {}
+      });
+    } catch (e) {}
+
+    // 通道 2：新版 DOM 卡片（.job-card BEM 结构，无详情链接时降级为标题+公司伪 URL）
+    if (jobs.length === 0) {
+      document.querySelectorAll('.job-card').forEach(card => {
+        try {
+          const titleEl = card.querySelector('.job-card__title-clamp');
+          const compEl = card.querySelector('.job-card__company-name');
+          const salaryEl = card.querySelector('.job-card__salary');
+          const locEl = card.querySelector('.job-card__location span');
+          const tags = Array.from(card.querySelectorAll('.job-card__skill-tag')).map(t => t.innerText.trim()).filter(Boolean);
+          if (titleEl && compEl) {
+            const title = titleEl.innerText.trim();
+            const company = compEl.innerText.trim();
+            const pseudoUrl = 'https://www.zhaopin.com/jobs/#zp_' + encodeURIComponent(title + '|' + company);
+            jobs.push({
+              id: 'zhaopin_' + btoa(unescape(encodeURIComponent(pseudoUrl))).substring(0, 16),
+              title: title,
+              company: company,
+              city: locEl ? locEl.innerText.trim().split(/\s+/)[0] : '未知',
+              workMode: 'ONSITE',
+              salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
+              description: `智联在招职位：${title}｜${tags.join(' / ')}`,
+              url: pseudoUrl,
+              platform: 'ZHAOPIN',
+              publishOrActiveTime: '近期发布',
+              discoveredAt: new Date().toISOString()
+            });
+          }
+        } catch (e) {}
+      });
+    }
+
+    // 通道 3：老版搜索结果页选择器兜底
+    if (jobs.length === 0) {
+      const cards = document.querySelectorAll('.joblist-box__item, .positionlist__list');
+      cards.forEach(card => {
+        try {
+          const titleEl = card.querySelector('.iteminfo__top__job__title');
+          const compEl = card.querySelector('.iteminfo__top__company__title');
+          const salaryEl = card.querySelector('.iteminfo__top__job__salary');
+          const areaEl = card.querySelector('.iteminfo__top__job__area');
+          const linkEl = card.querySelector('a');
+
+          if (titleEl && compEl && linkEl) {
+            const href = linkEl.getAttribute('href');
+            jobs.push({
+              id: 'zhaopin_' + btoa(unescape(encodeURIComponent(href))).substring(0, 16),
+              title: titleEl.innerText.trim(),
+              company: compEl.innerText.trim(),
+              city: areaEl ? areaEl.innerText.trim() : '长沙',
+              workMode: 'ONSITE',
+              salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
+              description: `智联在招职位：${titleEl.innerText.trim()}`,
+              url: href,
+              platform: 'ZHAOPIN',
+              publishOrActiveTime: '近期发布',
+              discoveredAt: new Date().toISOString()
+            });
+          }
+        } catch (e) {}
+      });
+    }
   }
 
   // 浮窗提示
@@ -124,7 +188,7 @@
   };
 
   if (jobs.length === 0) {
-    showToast('⚠️ 未能在此页面识别到有效职位列表，请确保处于职位搜索结果页！', '#EF4444');
+    showToast('⚠️ 未能识别到职位列表：请确认处于搜索结果页；智联推荐流需先登录才能看到职位！', '#EF4444');
     return;
   }
 

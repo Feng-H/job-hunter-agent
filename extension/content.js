@@ -112,39 +112,108 @@
       });
     }
 
-    // ---- 智联列表 ----
+    // ---- 智联列表（新版 __INITIAL_STATE__ 优先 → 新版 .job-card DOM → 老版选择器） ----
     else if (host.includes('zhaopin.com')) {
-      const cards = document.querySelectorAll('.joblist-box__item, .positionlist__list');
-      cards.forEach(card => {
-        try {
-          const titleEl = card.querySelector('.iteminfo__top__job__title');
-          const compEl = card.querySelector('.iteminfo__top__company__title');
-          const salaryEl = card.querySelector('.iteminfo__top__job__salary');
-          const areaEl = card.querySelector('.iteminfo__top__job__area');
-          const linkEl = card.querySelector('a');
-          const cardText = card.innerText || '';
-          const isHeadhunter = /猎头|人力资源|人才咨询/.test(cardText);
-
-          if (titleEl && compEl && linkEl) {
-            const href = linkEl.getAttribute('href') || '';
+      // 通道 1：新版 SPA 全局状态（结构化：详情URL/真实薪资/发布时间/猎头代招标记）
+      try {
+        const st = window.__INITIAL_STATE__;
+        const list = st && Array.isArray(st.positionList) ? st.positionList : [];
+        list.forEach(item => {
+          try {
+            if (!item || !item.name || !item.companyName) return;
+            const url = (item.positionURL || item.positionUrl || '').replace(/^http:/, 'https:')
+              || `https://www.zhaopin.com/jobdetail/${item.number || ''}.htm`;
+            const isHeadhunter = /猎头|人力资源|人才咨询|人才服务/.test(
+              String(item.companyName || '') + String(item.industryName || '') + String(item.cardCustomJson || ''));
+            const tags = [item.education, item.workingExp, item.workType].filter(Boolean).join(' / ');
             jobs.push({
-              id: makeId('zhaopin', href),
-              _key: canonicalKey(href),
-              title: titleEl.innerText.trim(),
-              company: compEl.innerText.trim(),
-              city: areaEl ? areaEl.innerText.trim() : '未知',
+              id: 'zhaopin_' + (item.number || makeId('zp', url).slice(7, 23)),
+              _key: canonicalKey(url),
+              title: String(item.name).replace(/\+.*(?:五险|公积金|双休|年终|带薪|补贴|餐补|包吃|包住|住宿|体检).+$/, '').trim() || item.name,
+              company: item.companyName,
+              city: item.workCity || '未知',
               workMode: 'ONSITE',
-              salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
-              description: `智联在招职位：${titleEl.innerText.trim()}`,
-              url: href,
+              salaryText: item.salary60 || item.salaryReal || '面议',
+              description: `智联在招职位：${item.name}｜${tags}｜行业:${item.industryName || '未知'}`,
+              url: url,
               platform: 'ZHAOPIN',
               sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
-              publishOrActiveTime: '近期发布',
+              publishOrActiveTime: item.publishTime || item.firstPublishTime || '近期发布',
               discoveredAt: new Date().toISOString()
             });
-          }
-        } catch (e) {}
-      });
+          } catch (e) {}
+        });
+      } catch (e) {}
+
+      // 通道 2：新版 DOM 卡片（.job-card BEM；卡片无详情链接，用标题+公司生成稳定伪 URL）
+      if (jobs.length === 0) {
+        document.querySelectorAll('.job-card').forEach(card => {
+          try {
+            const titleEl = card.querySelector('.job-card__title-clamp');
+            const compEl = card.querySelector('.job-card__company-name');
+            const salaryEl = card.querySelector('.job-card__salary');
+            const locEl = card.querySelector('.job-card__location span');
+            const tags = Array.from(card.querySelectorAll('.job-card__skill-tag')).map(t => t.innerText.trim()).filter(Boolean);
+            const cardText = card.innerText || '';
+            const isHeadhunter = /猎头|人力资源|人才咨询/.test(cardText);
+            if (titleEl && compEl) {
+              const title = titleEl.innerText.trim();
+              const company = compEl.innerText.trim();
+              const pseudoUrl = 'https://www.zhaopin.com/jobs/#zp_' + encodeURIComponent(title + '|' + company);
+              jobs.push({
+                id: makeId('zhaopin', pseudoUrl),
+                _key: canonicalKey(pseudoUrl),
+                title: title,
+                company: company,
+                city: locEl ? locEl.innerText.trim().split(/\s+/)[0] : '未知',
+                workMode: 'ONSITE',
+                salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
+                description: `智联在招职位：${title}｜${tags.join(' / ')}`,
+                url: pseudoUrl,
+                platform: 'ZHAOPIN',
+                sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
+                publishOrActiveTime: '近期发布',
+                discoveredAt: new Date().toISOString()
+              });
+            }
+          } catch (e) {}
+        });
+      }
+
+      // 通道 3：老版搜索结果页
+      if (jobs.length === 0) {
+        const cards = document.querySelectorAll('.joblist-box__item, .positionlist__list');
+        cards.forEach(card => {
+          try {
+            const titleEl = card.querySelector('.iteminfo__top__job__title');
+            const compEl = card.querySelector('.iteminfo__top__company__title');
+            const salaryEl = card.querySelector('.iteminfo__top__job__salary');
+            const areaEl = card.querySelector('.iteminfo__top__job__area');
+            const linkEl = card.querySelector('a');
+            const cardText = card.innerText || '';
+            const isHeadhunter = /猎头|人力资源|人才咨询/.test(cardText);
+
+            if (titleEl && compEl && linkEl) {
+              const href = linkEl.getAttribute('href') || '';
+              jobs.push({
+                id: makeId('zhaopin', href),
+                _key: canonicalKey(href),
+                title: titleEl.innerText.trim(),
+                company: compEl.innerText.trim(),
+                city: areaEl ? areaEl.innerText.trim() : '未知',
+                workMode: 'ONSITE',
+                salaryText: salaryEl ? salaryEl.innerText.trim() : '面议',
+                description: `智联在招职位：${titleEl.innerText.trim()}`,
+                url: href,
+                platform: 'ZHAOPIN',
+                sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
+                publishOrActiveTime: '近期发布',
+                discoveredAt: new Date().toISOString()
+              });
+            }
+          } catch (e) {}
+        });
+      }
     }
 
     return jobs;
