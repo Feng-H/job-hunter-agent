@@ -1599,11 +1599,12 @@
     // 全量主档案渲染逻辑
     async function loadProfileJson() {
       try {
-        const res = await fetch('/api/config/profile');
+        const res = await fetch('/api/profile');
         const data = await res.json();
-        currentProfileData = data;
-        document.getElementById('profile-json-editor').value = JSON.stringify(data, null, 2);
-        renderProfileVisual(data);
+        const profile = data.profile || data;
+        currentProfileData = profile;
+        document.getElementById('profile-json-editor').value = JSON.stringify(profile, null, 2);
+        renderProfileVisual(profile);
       } catch (e) {
         console.error('加载履历失败:', e);
       }
