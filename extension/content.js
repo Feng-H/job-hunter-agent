@@ -19,6 +19,7 @@
   function detectPageType() {
     const path = location.pathname;
     if (host.includes('zhipin.com') && /job_detail/.test(path)) return 'boss_detail';
+    if (host.includes('zhaopin.com') && /jobdetail/i.test(path)) return 'zhaopin_detail';
     if (host.includes('liepin.com') && (/\/job\//.test(path) || document.querySelector('.job-interview-container, [class*="job-detail"]'))) {
       if (document.querySelectorAll('.job-list-item, .job-card-pc-container').length >= 3) return 'list';
       return 'liepin_detail';
@@ -30,7 +31,7 @@
   function extractJobsFromListPage() {
     const jobs = [];
     const pageType = detectPageType();
-    if (pageType === 'boss_detail' || pageType === 'liepin_detail') {
+    if (pageType === 'boss_detail' || pageType === 'liepin_detail' || pageType === 'zhaopin_detail') {
       const single = extractJobFromDetailPage(pageType);
       return single ? [single] : [];
     }
@@ -248,6 +249,44 @@
           detailCaptured: true,
           hrName: hrEl ? hrEl.innerText.trim().slice(0, 50) : '',
           publishOrActiveTime: '详情页采集',
+          discoveredAt: new Date().toISOString()
+        };
+      }
+
+      if (pageType === 'zhaopin_detail') {
+        // 智联详情页：优先读 __INITIAL_STATE__.jobDetail.detailedPosition（结构化全量 JD + 福利标签）
+        const dp = (window.__INITIAL_STATE__ && window.__INITIAL_STATE__.jobDetail && window.__INITIAL_STATE__.jobDetail.detailedPosition) || null;
+        const jdEl = document.querySelector('.job-detail-section, .describe, [class*="job-description"]');
+        if (!dp && !jdEl) return null;
+
+        let welfare = [];
+        try { welfare = JSON.parse((dp && dp.welfareTags) || '[]'); } catch (e) {}
+        const rawDesc = (dp && (dp.description || String(dp.jobDesc || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')))
+          || (jdEl ? jdEl.innerText.trim() : '');
+        const desc = [rawDesc, welfare.length ? `福利保障: ${welfare.join(' / ')}` : '']
+          .filter(Boolean).join('\n').trim();
+
+        const title = ((dp && dp.name) || document.title.split('招聘')[0]).trim();
+        const company = (dp && dp.companyName) || '';
+        if (!title || !company) return null;
+
+        const url = dp && dp.number ? `https://www.zhaopin.com/jobdetail/${dp.number}.htm` : location.href;
+        const isHeadhunter = /猎头|人力资源|人才咨询|人才服务/.test(company + String((dp && dp.industryName) || ''));
+
+        return {
+          id: 'zhaopin_' + ((dp && dp.number) || makeId('zp', url).slice(7, 23)),
+          _key: canonicalKey(url),
+          title: title.replace(/\+.*(?:五险|公积金|双休|年终|带薪|补贴|餐补|包吃|包住|住宿|体检).+$/, '').trim() || title,
+          company,
+          city: (dp && (dp.workCity || dp.positionWorkCity)) || '未知',
+          workMode: /远程/.test(desc) ? 'REMOTE' : 'ONSITE',
+          salaryText: (dp && dp.salary) || '面议',
+          description: desc.slice(0, 5000),
+          url,
+          platform: 'ZHAOPIN',
+          sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
+          detailCaptured: true,
+          publishOrActiveTime: (dp && (dp.positionPublishTime || dp.publishTime)) || '近期发布',
           discoveredAt: new Date().toISOString()
         };
       }
@@ -470,7 +509,8 @@
       if (allJobs.length === 0) return;
 
       const knownKeys = await loadCollectedKeys();
-      const newJobs = allJobs.filter(j => !knownKeys[j._key]);
+      // 详情页全量抓取始终放行（服务端会用富 JD 更新已有记录并重新初筛），仅列表岗位受客户端去重约束
+      const newJobs = allJobs.filter(j => j.detailCaptured || !knownKeys[j._key]);
       if (newJobs.length === 0) return;
 
       const data = await postJobs(newJobs);

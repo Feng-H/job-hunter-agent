@@ -759,6 +759,7 @@ export class CollectorServer {
           let detailCount = 0;
           let headhunterCount = 0;
           let storedOnlyCount = 0;
+          let enrichedCount = 0;
 
           const tracker = (this.agent as any).tracker;
           await tracker.reload?.(); // 批处理前重载 KV 最新数据，防多实例旧快照互相覆盖
@@ -768,10 +769,18 @@ export class CollectorServer {
             if (job.detailCaptured) detailCount++;
             if (job.sourceType === 'HEADHUNTER') headhunterCount++;
 
+            // 已在库中的岗位：若本次带来更丰富的全量 JD（详情页深抓），合并富化并重跑初筛
+            job.id = tracker.generateFingerprint(job.company, job.title, job.url);
+            if (tracker.isAlreadyProcessed(job.id)) {
+              try {
+                if (await this.agent.enrichExistingJob(job)) enrichedCount++;
+              } catch (e) {}
+              continue;
+            }
+
             // 每日配额防护：超过单平台日限额的岗位只入库去重，不做 LLM 深析与推送（防自动采集刷爆配额）
             const quota = safety.canProcess(job.platform);
             if (!quota.allowed) {
-              job.id = tracker.generateFingerprint(job.company, job.title, job.url);
               if (!tracker.isAlreadyProcessed(job.id)) {
                 tracker.registerDiscoveredJob(job);
                 storedOnlyCount++;
@@ -804,6 +813,7 @@ export class CollectorServer {
           const parts = [];
           parts.push(`成功提取 ${jobs.length} 个岗位（服务端指纹自动去重）`);
           if (detailCount > 0) parts.push(`含 ${detailCount} 个全量 JD 深度抓取`);
+          if (enrichedCount > 0) parts.push(`${enrichedCount} 个已有岗位已用全量 JD 更新并重新初筛`);
           if (headhunterCount > 0) parts.push(`${headhunterCount} 个猎头帖已尝试指纹溯源`);
           if (storedOnlyCount > 0) parts.push(`${storedOnlyCount} 个超出今日配额仅入库`);
           parts.push(`${approvedCount} 个过筛推送！`);

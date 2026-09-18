@@ -101,6 +101,32 @@ export class JobHunterCore {
   }
 
   /**
+   * 全量 JD 富化已有岗位：详情页深抓的岗位与列表页采集指纹相同时，合并富描述并重跑初筛。
+   * 仅重判未进入人工流程的状态（DISCOVERED/FILTERED_OUT/PENDING_REVIEW）。
+   */
+  public async enrichExistingJob(job: JobPost): Promise<boolean> {
+    const record = this.tracker.getRecord(job.id);
+    if (!record) return false;
+
+    const richer = (job.description || '').length > ((record.job.description || '').length) + 50;
+    if (!job.detailCaptured && !richer) return false;
+
+    // 合并更丰富的字段（只补强不覆盖为更差的值）
+    if (richer) record.job.description = job.description;
+    if (job.salaryText && job.salaryText !== '面议') record.job.salaryText = job.salaryText;
+    if (job.publishOrActiveTime && job.publishOrActiveTime !== '详情页采集') record.job.publishOrActiveTime = job.publishOrActiveTime;
+    if (job.sourceType) record.job.sourceType = job.sourceType;
+
+    if (record.status === 'DISCOVERED' || record.status === 'FILTERED_OUT' || record.status === 'PENDING_REVIEW') {
+      await this.ensureFreshConfig();
+      const verdict = this.filter.evaluate(record.job, this.profile, this.memoryManager.getMemory());
+      const newStatus = (!verdict.passed && verdict.hardFailed) ? 'FILTERED_OUT' : 'PENDING_REVIEW';
+      this.tracker.updateStatus(job.id, newStatus as any, `全量 JD 深抓富化后重新初筛（评分 ${verdict.score}）`, { filterResult: verdict });
+    }
+    return true;
+  }
+
+  /**
    * 处理单个真实岗位（用于书签实时采集或单独推送）
    */
   public async processSingleJob(job: JobPost): Promise<{ approved: boolean; reason?: string }> {

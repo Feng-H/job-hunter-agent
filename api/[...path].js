@@ -2092,6 +2092,27 @@ var init_core = __esm({
         return { rechecked, promoted, stillRejected };
       }
       /**
+       * 全量 JD 富化已有岗位：详情页深抓的岗位与列表页采集指纹相同时，合并富描述并重跑初筛。
+       * 仅重判未进入人工流程的状态（DISCOVERED/FILTERED_OUT/PENDING_REVIEW）。
+       */
+      async enrichExistingJob(job) {
+        const record = this.tracker.getRecord(job.id);
+        if (!record) return false;
+        const richer = (job.description || "").length > (record.job.description || "").length + 50;
+        if (!job.detailCaptured && !richer) return false;
+        if (richer) record.job.description = job.description;
+        if (job.salaryText && job.salaryText !== "\u9762\u8BAE") record.job.salaryText = job.salaryText;
+        if (job.publishOrActiveTime && job.publishOrActiveTime !== "\u8BE6\u60C5\u9875\u91C7\u96C6") record.job.publishOrActiveTime = job.publishOrActiveTime;
+        if (job.sourceType) record.job.sourceType = job.sourceType;
+        if (record.status === "DISCOVERED" || record.status === "FILTERED_OUT" || record.status === "PENDING_REVIEW") {
+          await this.ensureFreshConfig();
+          const verdict = this.filter.evaluate(record.job, this.profile, this.memoryManager.getMemory());
+          const newStatus = !verdict.passed && verdict.hardFailed ? "FILTERED_OUT" : "PENDING_REVIEW";
+          this.tracker.updateStatus(job.id, newStatus, `\u5168\u91CF JD \u6DF1\u6293\u5BCC\u5316\u540E\u91CD\u65B0\u521D\u7B5B\uFF08\u8BC4\u5206 ${verdict.score}\uFF09`, { filterResult: verdict });
+        }
+        return true;
+      }
+      /**
        * 处理单个真实岗位（用于书签实时采集或单独推送）
        */
       async processSingleJob(job) {
@@ -44578,15 +44599,23 @@ var CollectorServer = class {
           let detailCount = 0;
           let headhunterCount = 0;
           let storedOnlyCount = 0;
+          let enrichedCount = 0;
           const tracker = this.agent.tracker;
           await tracker.reload?.();
           const safety = new AntiRiskEngine();
           for (const job of jobs) {
             if (job.detailCaptured) detailCount++;
             if (job.sourceType === "HEADHUNTER") headhunterCount++;
+            job.id = tracker.generateFingerprint(job.company, job.title, job.url);
+            if (tracker.isAlreadyProcessed(job.id)) {
+              try {
+                if (await this.agent.enrichExistingJob(job)) enrichedCount++;
+              } catch (e2) {
+              }
+              continue;
+            }
             const quota = safety.canProcess(job.platform);
             if (!quota.allowed) {
-              job.id = tracker.generateFingerprint(job.company, job.title, job.url);
               if (!tracker.isAlreadyProcessed(job.id)) {
                 tracker.registerDiscoveredJob(job);
                 storedOnlyCount++;
@@ -44614,6 +44643,7 @@ var CollectorServer = class {
           const parts = [];
           parts.push(`\u6210\u529F\u63D0\u53D6 ${jobs.length} \u4E2A\u5C97\u4F4D\uFF08\u670D\u52A1\u7AEF\u6307\u7EB9\u81EA\u52A8\u53BB\u91CD\uFF09`);
           if (detailCount > 0) parts.push(`\u542B ${detailCount} \u4E2A\u5168\u91CF JD \u6DF1\u5EA6\u6293\u53D6`);
+          if (enrichedCount > 0) parts.push(`${enrichedCount} \u4E2A\u5DF2\u6709\u5C97\u4F4D\u5DF2\u7528\u5168\u91CF JD \u66F4\u65B0\u5E76\u91CD\u65B0\u521D\u7B5B`);
           if (headhunterCount > 0) parts.push(`${headhunterCount} \u4E2A\u730E\u5934\u5E16\u5DF2\u5C1D\u8BD5\u6307\u7EB9\u6EAF\u6E90`);
           if (storedOnlyCount > 0) parts.push(`${storedOnlyCount} \u4E2A\u8D85\u51FA\u4ECA\u65E5\u914D\u989D\u4EC5\u5165\u5E93`);
           parts.push(`${approvedCount} \u4E2A\u8FC7\u7B5B\u63A8\u9001\uFF01`);

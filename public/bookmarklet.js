@@ -78,9 +78,40 @@
     });
   }
 
-  // 3. 智联招聘提取器（新版 www.zhaopin.com/jobs 推荐/搜索流 + 老版兼容）
+  // 3. 智联招聘提取器（详情页全量 JD 深抓 + 新版列表流 + 老版兼容）
   else if (host.includes('zhaopin.com')) {
+    // 通道 0：详情页 —— 读取 __INITIAL_STATE__.jobDetail.detailedPosition 结构化全量 JD
+    if (/\/jobdetail\//i.test(window.location.pathname)) {
+      try {
+        const dp = window.__INITIAL_STATE__ && window.__INITIAL_STATE__.jobDetail && window.__INITIAL_STATE__.jobDetail.detailedPosition;
+        if (dp && dp.name && dp.companyName) {
+          let welfare = [];
+          try { welfare = JSON.parse(dp.welfareTags || '[]'); } catch (e) {}
+          const rawDesc = dp.description || String(dp.jobDesc || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+          const desc = [rawDesc, welfare.length ? '福利保障: ' + welfare.join(' / ') : ''].filter(Boolean).join('\n').trim();
+          const url = 'https://www.zhaopin.com/jobdetail/' + (dp.number || '') + '.htm';
+          const isHeadhunter = /猎头|人力资源|人才咨询|人才服务/.test(String(dp.companyName || ''));
+          jobs.push({
+            id: 'zhaopin_' + (dp.number || btoa(unescape(encodeURIComponent(url))).substring(0, 16)),
+            title: String(dp.name).replace(/\+.*(?:五险|公积金|双休|年终|带薪|补贴|餐补|包吃|包住|住宿|体检).+$/, '').trim() || dp.name,
+            company: dp.companyName,
+            city: dp.workCity || dp.positionWorkCity || '未知',
+            workMode: /远程/.test(desc) ? 'REMOTE' : 'ONSITE',
+            salaryText: dp.salary || '面议',
+            description: desc.slice(0, 5000),
+            url: url,
+            platform: 'ZHAOPIN',
+            sourceType: isHeadhunter ? 'HEADHUNTER' : 'COMPANY_DIRECT',
+            detailCaptured: true,
+            publishOrActiveTime: dp.positionPublishTime || dp.publishTime || '近期发布',
+            discoveredAt: new Date().toISOString()
+          });
+        }
+      } catch (e) {}
+    }
+
     // 通道 1（最优）：新版 SPA 全局状态 __INITIAL_STATE__.positionList —— 结构化数据带详情URL/真实薪资/发布时间
+    if (jobs.length === 0) {
     try {
       const st = window.__INITIAL_STATE__;
       const list = st && Array.isArray(st.positionList) ? st.positionList : [];
@@ -109,6 +140,7 @@
         } catch (e) {}
       });
     } catch (e) {}
+    } // 结束通道 1（仅当详情页未提取到时才走列表通道）
 
     // 通道 2：新版 DOM 卡片（.job-card BEM 结构，无详情链接时降级为标题+公司伪 URL）
     if (jobs.length === 0) {
