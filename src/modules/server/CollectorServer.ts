@@ -1,3 +1,204 @@
+function escapeHtml(str?: string): string {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderFeishuActionHtml(options: {
+  success: boolean;
+  actionTitle: string;
+  badgeText: string;
+  badgeType: "success" | "danger" | "info";
+  company: string;
+  title: string;
+  salary?: string;
+  platform?: string;
+  city?: string;
+  description: string;
+  jobUrl?: string;
+}): string {
+  const isSuccess = options.badgeType === "success";
+  const isDanger = options.badgeType === "danger";
+
+  const badgeStyle = isSuccess
+    ? "background-color: #ecfdf5; color: #047857; border-color: #a7f3d0;"
+    : (isDanger ? "background-color: #fff1f2; color: #be123c; border-color: #fecdd3;" : "background-color: #eef2ff; color: #4338ca; border-color: #c7d2fe;");
+
+  const iconBg = isSuccess ? "#10b981" : (isDanger ? "#f43f5e" : "#6366f1");
+  const iconSvg = isSuccess
+    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>'
+    : (isDanger
+        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>'
+        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(options.actionTitle)} - Job-Hunter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      max-width: 480px;
+      width: 100%;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: ${iconBg};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      border: 1px solid;
+      margin-bottom: 1.25rem;
+      ${badgeStyle}
+    }
+    .job-box {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+    .job-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+    .job-meta {
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .job-salary {
+      color: #d97706;
+      font-weight: 600;
+    }
+    .description {
+      font-size: 0.9rem;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      background: #f8fafc;
+      padding: 0.85rem;
+      border-radius: 0.5rem;
+      border-left: 3px solid ${iconBg};
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.6rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+    }
+    .footer-tip {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrapper">
+      <svg width="30" height="30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        ${iconSvg}
+      </svg>
+    </div>
+    <h1 class="title">${escapeHtml(options.actionTitle)}</h1>
+    <div class="badge">${escapeHtml(options.badgeText)}</div>
+
+    <div class="job-box">
+      <div class="job-title">${escapeHtml(options.title)}</div>
+      <div class="job-meta">
+        🏢 <strong>${escapeHtml(options.company)}</strong>
+        ${options.city ? ` ｜ 📍 ${escapeHtml(options.city)}` : ""}
+        ${options.platform ? ` ｜ 🏷️ ${escapeHtml(options.platform)}` : ""}
+      </div>
+      ${options.salary ? `<div class="job-meta job-salary">💰 ${escapeHtml(options.salary)}</div>` : ""}
+    </div>
+
+    <div class="description">${escapeHtml(options.description)}</div>
+
+    <div class="btn-group">
+      <a href="/" class="btn btn-primary">📊 进入求职工作台看板</a>
+      ${options.jobUrl && options.jobUrl !== "https://example.com" ? `<a href="${escapeHtml(options.jobUrl)}" target="_blank" rel="noopener" class="btn btn-secondary">🔗 打开原招聘网站职位页</a>` : ""}
+      <button onclick="try{window.close();}catch(e){}window.history.back();" class="btn btn-secondary">✖️ 关闭本页面</button>
+    </div>
+
+    <div class="footer-tip">Job-Hunter Agent · 飞书多端智能互联</div>
+  </div>
+</body>
+</html>`;
+}
+
 import * as http from 'node:http';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -63,8 +264,13 @@ export class CollectorServer {
     }
 
     const host = req.headers.host || `127.0.0.1:${this.port}`;
-    const url = new URL(req.url || '/', `http://${host}`);
+    const proto = req.headers['x-forwarded-proto'] === 'https' || host.includes('vercel.app') ? 'https' : 'http';
+    const url = new URL(req.url || '/', `${proto}://${host}`);
     let pathname = url.pathname;
+
+    try {
+      (this.agent as any).feishu?.setRuntimeHost?.(`${proto}://${host}`);
+    } catch {}
 
     // Vercel rewrite 兼容：/auth/** 与 /healthz 会被重写为 /api/auth/**、/api/healthz 进入本函数，
     // 函数内 req.url 可能是重写后路径或原始路径，此处统一归一化保证两种都能路由
@@ -337,7 +543,7 @@ export class CollectorServer {
         try {
           await (this.agent as any).tracker.reload?.(); // 状态写前重载最新数据，防整库旧快照覆盖
           const { action, reason } = JSON.parse(body);
-          this.agent.handleUserAction(jobId, action === 'APPROVED' ? 'APPROVED' : 'REJECTED', reason);
+          await this.agent.handleUserAction(jobId, action === 'APPROVED' ? 'APPROVED' : 'REJECTED', reason);
           return sendJson(200, { code: 0, message: '操作成功' });
         } catch (e: any) {
           return sendJson(400, { code: -1, error: e.message });
@@ -350,6 +556,12 @@ export class CollectorServer {
     if (req.method === 'POST' && pathname === '/api/scan') {
       if (isDemo) {
         return sendJson(403, { code: -1, error: '演示模式下禁止触发真实爬虫扫描' });
+      }
+      if (process.env.VERCEL || process.platform !== 'darwin') {
+        return sendJson(400, {
+          code: -1,
+          error: '云端部署或非 macOS 环境无法直接读取本地前台 Chrome。\n请前往「/setup」页面安装专属 Chrome 扩展或使用一键书签采集器，在招聘网站即可随时同步职位！'
+        });
       }
       try {
         const { StandaloneJobHunter } = await import('../../standalone.js');
@@ -468,6 +680,7 @@ export class CollectorServer {
             webhookUrl: 'https://open.feishu.cn/open-apis/bot/v2/hook/••••••••',
             appId: 'cli_••••••••',
             appSecret: '••••••••',
+            serviceBaseUrl: 'https://job-hunter-agent-orpin.vercel.app',
             isDemo: true
           });
         }
@@ -477,9 +690,11 @@ export class CollectorServer {
         const feishuConf = await readJson('data/preferences/feishu.json', {
           webhookUrl: process.env.FEISHU_WEBHOOK_URL || '',
           appId: process.env.FEISHU_APP_ID || '',
-          appSecret: process.env.FEISHU_APP_SECRET || ''
+          appSecret: process.env.FEISHU_APP_SECRET || '',
+          serviceBaseUrl: process.env.FEISHU_SERVICE_BASE_URL || ''
         });
-        return sendJson(200, feishuConf);
+        const detectedBaseUrl = (this.agent as any).feishu?.getBaseUrl?.() || 'https://job-hunter-agent-orpin.vercel.app';
+        return sendJson(200, { ...feishuConf, detectedBaseUrl });
       }
       if (req.method === 'POST') {
         let body = '';
@@ -488,7 +703,8 @@ export class CollectorServer {
           try {
             const data = JSON.parse(body);
             await writeJson('data/preferences/feishu.json', data);
-            return sendJson(200, { code: 0, message: '飞书配置已更新' });
+            try { await this.agent.reloadConfig(); } catch (e) {}
+            return sendJson(200, { code: 0, message: '飞书配置已更新并即刻生效！' });
           } catch (e: any) {
             return sendJson(400, { code: -1, error: e.message });
           }
@@ -499,10 +715,13 @@ export class CollectorServer {
 
     if (req.method === 'POST' && pathname === '/api/config/feishu/test') {
       if (isDemo) {
-        return sendJson(200, { success: true, message: '【Demo 演示模式】已模拟发送飞书测试卡片' });
+        return sendJson(200, { success: true, message: '【Demo 演示模式】已模拟发送飞书测试卡片（真实发送请登录管理员）' });
       }
       const feishu = (this.agent as any).feishu;
-      const ok = await feishu.sendApprovalNotification(
+      if (feishu?.reloadConfig) {
+        await feishu.reloadConfig();
+      }
+      const result = await feishu.sendNotification(
         {
           id: 'test_demo',
           title: '资深全栈架构师 (测试推送)',
@@ -530,10 +749,256 @@ export class CollectorServer {
           markdownContent: '# 测试简历',
           greetingMessage: '您好！这是一条测试卡片，说明飞书通道已完美打通！',
           keyMatchingPoints: ['全栈架构', '高并发']
-        }
+        },
+        { skipUrlCheck: true }
       );
-      return sendJson(200, { success: ok, message: ok ? '推送成功' : '推送失败，请检查配置' });
+      return sendJson(200, result);
     }
+    // ============ 3.8.1 飞书开放平台 Webhook 回调端点 (原生交互 / Challenge 验证) ============
+    if (pathname === '/api/feishu/webhook') {
+      if (req.method === 'GET') {
+        return sendJson(200, { code: 0, status: 'ok', message: '飞书 Webhook 交互端点已就绪！' });
+      }
+      if (req.method === 'POST') {
+        let body = '';
+        req.on('data', c => body += c);
+        req.on('end', async () => {
+          try {
+            const data = body ? JSON.parse(body) : {};
+
+            // 1. 飞书开放平台 URL 验证挑战响应 (Challenge Handshake)
+            if (data.type === 'url_verification' || data.challenge) {
+              console.log(`🤝 [Feishu Webhook] 收到开放平台 URL 验证握手 Challenge: ${data.challenge}`);
+              return sendJson(200, { challenge: data.challenge });
+            }
+
+            // 2. 卡片交互动作 (card.action.trigger)
+            let actionValue = data.action?.value || data.event?.action?.value;
+            if (typeof actionValue === 'string') {
+              try { actionValue = JSON.parse(actionValue); } catch {}
+            }
+
+            if (actionValue && typeof actionValue === 'object') {
+              const actionType = actionValue.action;
+              const jobId = actionValue.jobId;
+
+              console.log(`📥 [Feishu Webhook] 收到卡片动作触发: action=${actionType}, jobId=${jobId}`);
+
+              if (jobId === 'test_demo') {
+                return sendJson(200, {
+                  toast: {
+                    type: 'success',
+                    content: '🎉 飞书卡片交互测试成功！系统已正常接收并处理您的操作。'
+                  }
+                });
+              }
+
+              await (this.agent as any).tracker.reload?.();
+              const record = (this.agent as any).tracker.getRecord(jobId);
+              if (!record) {
+                return sendJson(200, {
+                  toast: {
+                    type: 'warning',
+                    content: '⚠️ 未找到该岗位记录（可能已被重筛淘汰或清理）'
+                  }
+                });
+              }
+
+              if (actionType === 'APPROVE') {
+                await this.agent.handleUserAction(jobId, 'APPROVED');
+                return sendJson(200, {
+                  toast: {
+                    type: 'success',
+                    content: `✅ 已确认投递【${record.job.company} · ${record.job.title}】！看板状态已更新`
+                  }
+                });
+              } else if (actionType === 'REJECT') {
+                await this.agent.handleUserAction(jobId, 'REJECTED', '飞书卡片直接拒绝');
+                return sendJson(200, {
+                  toast: {
+                    type: 'info',
+                    content: `🛑 已拒绝【${record.job.company}】并记录至负反馈库`
+                  }
+                });
+              } else if (actionType === 'REQUEST_TWEAK') {
+                await this.agent.handleUserAction(jobId, 'REQUEST_TWEAK', '飞书卡片要求调整简历');
+                return sendJson(200, {
+                  toast: {
+                    type: 'info',
+                    content: `✏️ 已触发针对【${record.job.company}】的简历调整流程`
+                  }
+                });
+              }
+            }
+
+            return sendJson(200, { code: 0, msg: 'success' });
+          } catch (e: any) {
+            console.error('[Feishu Webhook] 处理异常:', e);
+            return sendJson(200, {
+              toast: {
+                type: 'error',
+                content: `处理操作异常: ${e.message}`
+              }
+            });
+          }
+        });
+        return;
+      }
+    }
+
+    // ============ 3.8.2 飞书卡片动作直接跳转端点 (URL Action Fallback) ============
+    // 无论使用群自定义机器人还是自建应用，点击卡片按钮的跳转链接均可一键完成流转，
+    // 彻底解决飞书客户端提示「未配置卡片交互功能」的问题！
+    if (pathname === '/api/feishu/action') {
+      const handleAction = async (action: string, jobId: string) => {
+        if (!jobId) {
+          res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: false,
+            actionTitle: '参数错误',
+            badgeText: '缺少 Job ID',
+            badgeType: 'danger',
+            company: '系统提示',
+            title: '操作无法继续',
+            description: '请求中未包含有效的岗位 ID，请返回求职看板核对。'
+          }));
+          return;
+        }
+
+        if (jobId === 'test_demo') {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: '飞书交互测试完全成功！',
+            badgeText: action === 'APPROVE' ? '测试动作：确认投递' : (action === 'REJECT' ? '测试动作：拒绝岗位' : '测试动作：微调简历'),
+            badgeType: 'success',
+            company: '测试科技集团',
+            title: '资深全栈架构师 (测试推送)',
+            salary: '35-50K·15薪',
+            city: '上海',
+            platform: 'BOSS直聘',
+            description: '🎉 恭喜！您在飞书中点击的审批按钮已成功打通并送达求职系统！\n\n无论使用飞书群自定义机器人还是自建应用，本端点都能确保卡片按钮点击后状态自动生效，彻底告别「未配置卡片交互功能」提示！',
+            jobUrl: 'https://example.com'
+          }));
+          return;
+        }
+
+        await (this.agent as any).tracker.reload?.();
+        const record = (this.agent as any).tracker.getRecord(jobId);
+        if (!record) {
+          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: false,
+            actionTitle: '未找到该岗位记录',
+            badgeText: '岗位不存在或已清理',
+            badgeType: 'danger',
+            company: '未知企业',
+            title: '岗位信息失效',
+            description: '未在当前看板库中找到该岗位记录（可能已被重筛淘汰、被管理员清理或测试数据已重置）。请返回工作台看板查看最新职位。'
+          }));
+          return;
+        }
+
+        const company = record.job.company;
+        const title = record.job.title;
+        const salary = record.job.salaryText;
+        const city = record.job.city;
+        const platform = record.job.platform;
+        const jobUrl = record.job.url;
+
+        if (action === 'APPROVE') {
+          await this.agent.handleUserAction(jobId, 'APPROVED');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: '✅ 投递意向已确认！',
+            badgeText: '已更新为：已投递 / 待跟进',
+            badgeType: 'success',
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `已成功将【${company} · ${title}】移入「已投递」看板！定制简历与沟通话术已就绪，请保持关注后续 HR 回复与面试进展。`,
+            jobUrl
+          }));
+          return;
+        }
+
+        if (action === 'REJECT') {
+          await this.agent.handleUserAction(jobId, 'REJECTED', '飞书卡片操作拒绝');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: '🛑 已标记不合适',
+            badgeText: '已移入拒绝库',
+            badgeType: 'danger',
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `已将【${company} · ${title}】标记为拒绝，并已沉淀至 AI 负反馈偏好记忆库，后续系统将自动降低此类企业或 JD 的推荐权重。`,
+            jobUrl
+          }));
+          return;
+        }
+
+        if (action === 'REQUEST_TWEAK') {
+          await this.agent.handleUserAction(jobId, 'REQUEST_TWEAK', '飞书卡片请求微调简历');
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: '✏️ 简历微调需求已接收',
+            badgeText: '状态：待调整复核',
+            badgeType: 'info',
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `已收到针对【${company} · ${title}】的简历调整请求！建议登录工作台看板，直接与 AI 对话微调专属简历亮点。`,
+            jobUrl
+          }));
+          return;
+        }
+
+        res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(renderFeishuActionHtml({
+          success: false,
+          actionTitle: '未知操作类型',
+          badgeText: `action=${action}`,
+          badgeType: 'danger',
+          company,
+          title,
+          description: '不支持的操作类型，请在飞书卡片重新选择操作。'
+        }));
+      };
+
+      if (req.method === 'GET') {
+        const action = url.searchParams.get('action') || 'APPROVE';
+        const jobId = url.searchParams.get('jobId') || '';
+        await handleAction(action, jobId);
+        return;
+      }
+
+      if (req.method === 'POST') {
+        let body = '';
+        req.on('data', c => body += c);
+        req.on('end', async () => {
+          try {
+            const data = body ? JSON.parse(body) : {};
+            const action = data.action || url.searchParams.get('action') || 'APPROVE';
+            const jobId = data.jobId || url.searchParams.get('jobId') || '';
+            await handleAction(action, jobId);
+          } catch {
+            await handleAction(url.searchParams.get('action') || 'APPROVE', url.searchParams.get('jobId') || '');
+          }
+        });
+        return;
+      }
+    }
+
 
     if (pathname === '/api/config/preferences') {
       if (isDemo) {
@@ -887,8 +1352,9 @@ export class CollectorServer {
     }
 
     // 静态资源回退（如果 public 目录下存在对应静态文件）
-    const publicStaticPath = path.resolve(process.cwd(), 'public', pathname.replace(/^\/+/, ''));
-    if (fs.existsSync(publicStaticPath) && !fs.statSync(publicStaticPath).isDirectory()) {
+    const publicDir = path.resolve(process.cwd(), 'public');
+    const publicStaticPath = path.resolve(publicDir, pathname.replace(/^\/+/, ''));
+    if (publicStaticPath.startsWith(publicDir) && fs.existsSync(publicStaticPath) && !fs.statSync(publicStaticPath).isDirectory()) {
       const ext = path.extname(publicStaticPath).toLowerCase();
       const mimeTypes: Record<string, string> = {
         '.html': 'text/html; charset=utf-8',

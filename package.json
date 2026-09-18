@@ -7,7 +7,7 @@
     "dev": "tsx src/server.ts",
     "server": "tsx src/server.ts",
     "build": "tsc && node scripts/build-api.mjs && rm -rf dist",
-    "test": "tsx scripts/test-regression.ts && tsx scripts/test-auth-persistence.ts && tsx scripts/test-demo-isolation.ts"
+    "test": "tsx scripts/test-regression.ts && tsx scripts/test-auth-persistence.ts && tsx scripts/test-demo-isolation.ts && tsx scripts/test-feishu-interaction.ts"
   },
   "keywords": [
     "job-hunter",

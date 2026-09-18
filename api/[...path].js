@@ -332,6 +332,9 @@ var init_JobTracker = __esm({
           byStatus: stats
         };
       }
+      async flush() {
+        await this.save();
+      }
       async save() {
         try {
           await writeJson(this.dbKey, Array.from(this.records.values()));
@@ -1447,16 +1450,66 @@ var init_FeishuClient = __esm({
     path4 = __toESM(require("node:path"));
     init_CommutePlanner();
     init_UrlValidator();
+    init_storage();
     FeishuNotifier = class {
       config;
       commutePlanner;
+      runtimeHost = "";
       constructor(config) {
         this.config = config || {
           webhookUrl: process.env.FEISHU_WEBHOOK_URL,
           appId: process.env.FEISHU_APP_ID,
-          appSecret: process.env.FEISHU_APP_SECRET
+          appSecret: process.env.FEISHU_APP_SECRET,
+          serviceBaseUrl: process.env.FEISHU_SERVICE_BASE_URL || process.env.APP_URL || ""
         };
         this.commutePlanner = new CommutePlanner();
+        this.reloadConfig().catch(() => {
+        });
+      }
+      setRuntimeHost(host) {
+        if (host && typeof host === "string") {
+          this.runtimeHost = host.trim().replace(/\/+$/, "");
+        }
+      }
+      getBaseUrl() {
+        if (this.config.serviceBaseUrl && this.config.serviceBaseUrl.trim()) {
+          return this.config.serviceBaseUrl.trim().replace(/\/+$/, "");
+        }
+        if (process.env.FEISHU_SERVICE_BASE_URL && process.env.FEISHU_SERVICE_BASE_URL.trim()) {
+          return process.env.FEISHU_SERVICE_BASE_URL.trim().replace(/\/+$/, "");
+        }
+        if (process.env.APP_URL && process.env.APP_URL.trim()) {
+          return process.env.APP_URL.trim().replace(/\/+$/, "");
+        }
+        if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+          return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim().replace(/\/+$/, "")}`;
+        }
+        if (process.env.VERCEL_URL) {
+          return `https://${process.env.VERCEL_URL.trim().replace(/\/+$/, "")}`;
+        }
+        if (this.runtimeHost) {
+          return this.runtimeHost;
+        }
+        return "https://job-hunter-agent-orpin.vercel.app";
+      }
+      async reloadConfig() {
+        try {
+          const stored = await readJson("data/preferences/feishu.json", {
+            webhookUrl: process.env.FEISHU_WEBHOOK_URL || "",
+            appId: process.env.FEISHU_APP_ID || "",
+            appSecret: process.env.FEISHU_APP_SECRET || ""
+          });
+          this.config = {
+            webhookUrl: stored.webhookUrl || process.env.FEISHU_WEBHOOK_URL || "",
+            appId: stored.appId || process.env.FEISHU_APP_ID || "",
+            appSecret: stored.appSecret || process.env.FEISHU_APP_SECRET || "",
+            receiveIdType: stored.receiveIdType,
+            receiveId: stored.receiveId,
+            serviceBaseUrl: stored.serviceBaseUrl || process.env.FEISHU_SERVICE_BASE_URL || process.env.APP_URL || ""
+          };
+        } catch {
+        }
+        return this.config;
       }
       /**
        * 构建飞书交互卡片 Payload
@@ -1591,87 +1644,174 @@ ${highlightsText}`
                   content: `**\u{1F517} \u771F\u5B9E\u5C97\u4F4D\u843D\u5730\u9875\uFF1A** [\u{1F449} \u70B9\u51FB\u76F4\u8FBE\u539F\u59CB\u62DB\u8058\u9875\u9762\u67E5\u770B\u8BE6\u60C5](${job.url})`
                 }
               },
-              {
-                tag: "action",
-                actions: [
-                  {
-                    tag: "button",
-                    text: {
-                      tag: "plain_text",
-                      content: "\u2705 \u786E\u8BA4\u6295\u9012"
+              (() => {
+                const baseUrl = this.getBaseUrl();
+                const safeJobId = job.id || "test_demo";
+                const approveUrl = `${baseUrl}/api/feishu/action?action=APPROVE&jobId=${encodeURIComponent(safeJobId)}`;
+                const tweakUrl = `${baseUrl}/api/feishu/action?action=REQUEST_TWEAK&jobId=${encodeURIComponent(safeJobId)}`;
+                const rejectUrl = `${baseUrl}/api/feishu/action?action=REJECT&jobId=${encodeURIComponent(safeJobId)}`;
+                return {
+                  tag: "action",
+                  actions: [
+                    {
+                      tag: "button",
+                      text: {
+                        tag: "plain_text",
+                        content: "\u2705 \u786E\u8BA4\u6295\u9012"
+                      },
+                      type: "primary",
+                      value: {
+                        action: "APPROVE",
+                        jobId: safeJobId
+                      },
+                      url: approveUrl,
+                      multi_url: {
+                        url: approveUrl,
+                        pc_url: approveUrl,
+                        android_url: approveUrl,
+                        ios_url: approveUrl
+                      }
                     },
-                    type: "primary",
-                    value: {
-                      action: "APPROVE",
-                      jobId: job.id
-                    }
-                  },
-                  {
-                    tag: "button",
-                    text: {
-                      tag: "plain_text",
-                      content: "\u270F\uFE0F \u4FEE\u6539\u7B80\u5386\u8981\u6C42"
+                    {
+                      tag: "button",
+                      text: {
+                        tag: "plain_text",
+                        content: "\u270F\uFE0F \u4FEE\u6539\u7B80\u5386\u8981\u6C42"
+                      },
+                      type: "default",
+                      value: {
+                        action: "REQUEST_TWEAK",
+                        jobId: safeJobId
+                      },
+                      url: tweakUrl,
+                      multi_url: {
+                        url: tweakUrl,
+                        pc_url: tweakUrl,
+                        android_url: tweakUrl,
+                        ios_url: tweakUrl
+                      }
                     },
-                    type: "default",
-                    value: {
-                      action: "REQUEST_TWEAK",
-                      jobId: job.id
+                    {
+                      tag: "button",
+                      text: {
+                        tag: "plain_text",
+                        content: "\u274C \u4E0D\u5408\u9002 / \u62D2\u7EDD"
+                      },
+                      type: "danger",
+                      value: {
+                        action: "REJECT",
+                        jobId: safeJobId
+                      },
+                      url: rejectUrl,
+                      multi_url: {
+                        url: rejectUrl,
+                        pc_url: rejectUrl,
+                        android_url: rejectUrl,
+                        ios_url: rejectUrl
+                      }
                     }
-                  },
-                  {
-                    tag: "button",
-                    text: {
-                      tag: "plain_text",
-                      content: "\u274C \u4E0D\u5408\u9002 / \u62D2\u7EDD"
-                    },
-                    type: "danger",
-                    value: {
-                      action: "REJECT",
-                      jobId: job.id
-                    }
-                  }
-                ]
-              }
+                  ]
+                };
+              })()
             ]
           }
         };
       }
       /**
-       * 发送卡片通知（带真实性校验拦截）
+       * 详细发送卡片通知：返回具体状态与原因，避免静默失败或伪成功
        */
-      async sendApprovalNotification(job, filter, tailor) {
-        const isLegit = await UrlValidator.verifyJobUrl(job.url, [job.title, job.company]);
-        if (!isLegit) {
-          console.warn(`\u{1F6D1} [\u63A8\u9001\u62E6\u622A] \u5C97\u4F4D [${job.company}] ${job.title} \u7684\u843D\u5730\u9875 (${job.url}) \u65E0\u6CD5\u6253\u5F00\u6216\u804C\u4F4D\u5DF2\u4E0B\u7EBF\uFF0C\u5DF2\u88AB\u4E25\u683C\u62E6\u622A\uFF0C\u4E0D\u5411\u98DE\u4E66\u63A8\u9001\uFF01`);
-          return false;
+      async sendNotification(job, filter, tailor, options) {
+        await this.reloadConfig();
+        if (!options?.skipUrlCheck) {
+          const isLegit = await UrlValidator.verifyJobUrl(job.url, [job.title, job.company]);
+          if (!isLegit) {
+            const msg = `\u5C97\u4F4D [${job.company}] ${job.title} \u7684\u843D\u5730\u9875 (${job.url}) \u65E0\u6CD5\u6253\u5F00\u6216\u804C\u4F4D\u5DF2\u4E0B\u7EBF\uFF0C\u5DF2\u88AB\u4E25\u683C\u62E6\u622A\uFF0C\u4E0D\u5411\u98DE\u4E66\u63A8\u9001\uFF01`;
+            console.warn(`\u{1F6D1} [\u63A8\u9001\u62E6\u622A] ${msg}`);
+            return { success: false, message: msg };
+          }
         }
         const card = this.buildJobApprovalCard(job, filter, tailor);
-        if (!this.config.webhookUrl) {
-          console.log("\n================== \u{1F514} \u98DE\u4E66\u4EA4\u4E92\u5361\u7247\u6A21\u62DF\u63A8\u9001 ==================");
-          console.log(`[\u4F01\u4E1A/\u804C\u4F4D]: ${job.company} \xB7 ${job.title} (${job.salaryText})`);
-          console.log(`[\u5DE5\u4F5C\u6A21\u5F0F]: ${job.workMode} \uFF5C \u5730\u70B9: ${job.city}`);
-          console.log(`[\u5339\u914D\u8BC4\u5206]: ${filter.score} \u5206`);
-          console.log(`[\u5339\u914D\u539F\u56E0]:
-${filter.reasons.map((r2) => "  - " + r2).join("\n")}`);
-          console.log(`[\u6253\u62DB\u547C\u8BDD\u672F]:
-  "${tailor.greetingMessage}"`);
-          console.log(`[\u5B9A\u5236\u7B80\u5386\u8DEF\u5F84]: ${tailor.snapshotPath}`);
-          console.log(`[\u4EA4\u4E92\u64CD\u4F5C]: [1] \u786E\u8BA4\u6295\u9012  [2] \u4FEE\u6539\u7B80\u5386  [3] \u62D2\u7EDD\u5C97\u4F4D`);
-          console.log("============================================================\n");
-          return true;
+        if (this.config.webhookUrl && this.config.webhookUrl.trim()) {
+          try {
+            const resp = await fetch(this.config.webhookUrl.trim(), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(card)
+            });
+            const text = await resp.text();
+            let data = {};
+            try {
+              data = JSON.parse(text);
+            } catch {
+            }
+            if (resp.ok && (data.code === 0 || data.StatusCode === 0)) {
+              return { success: true, message: "\u6D4B\u8BD5\u5361\u7247\u5DF2\u6210\u529F\u63A8\u9001\u5230\u98DE\u4E66\u7FA4\u804A\uFF01" };
+            }
+            const errMsg = data.msg || data.StatusMessage || text.slice(0, 150) || `HTTP ${resp.status}`;
+            console.error(`[FeishuNotifier] \u98DE\u4E66 Webhook \u62D2\u7EDD\u63A8\u9001 (HTTP ${resp.status}):`, errMsg);
+            return {
+              success: false,
+              message: `\u98DE\u4E66 Webhook \u63A8\u9001\u5931\u8D25 (Code ${data.code || data.StatusCode || resp.status}): ${errMsg}`
+            };
+          } catch (e2) {
+            console.error("[FeishuNotifier] Webhook \u7F51\u7EDC\u8BF7\u6C42\u5F02\u5E38:", e2);
+            return { success: false, message: `\u7F51\u7EDC\u8FDE\u63A5\u5F02\u5E38: ${e2.message}` };
+          }
         }
-        try {
-          const resp = await fetch(this.config.webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(card)
-          });
-          const data = await resp.json();
-          return data.code === 0 || data.StatusCode === 0;
-        } catch (e2) {
-          console.error("[FeishuNotifier] \u53D1\u9001\u5361\u7247\u5931\u8D25:", e2);
-          return false;
+        if (this.config.appId && this.config.appSecret) {
+          try {
+            const tokenResp = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json; charset=utf-8" },
+              body: JSON.stringify({
+                app_id: this.config.appId.trim(),
+                app_secret: this.config.appSecret.trim()
+              })
+            });
+            const tokenData = await tokenResp.json();
+            if (!tokenResp.ok || tokenData.code !== 0) {
+              const err = tokenData.msg || `HTTP ${tokenResp.status}`;
+              return { success: false, message: `\u98DE\u4E66\u81EA\u5EFA\u5E94\u7528\u9274\u6743\u5931\u8D25: ${err}\uFF08\u8BF7\u68C0\u67E5 App ID \u4E0E Secret\uFF09` };
+            }
+            const tenantToken = tokenData.tenant_access_token;
+            if (this.config.receiveId && this.config.receiveId.trim()) {
+              const receiveType = this.config.receiveIdType || "open_id";
+              const msgResp = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveType}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json; charset=utf-8",
+                  "Authorization": `Bearer ${tenantToken}`
+                },
+                body: JSON.stringify({
+                  receive_id: this.config.receiveId.trim(),
+                  msg_type: "interactive",
+                  content: JSON.stringify(card.card)
+                })
+              });
+              const msgData = await msgResp.json();
+              if (msgResp.ok && msgData.code === 0) {
+                return { success: true, message: "\u5DF2\u901A\u8FC7\u98DE\u4E66\u81EA\u5EFA\u5E94\u7528\u673A\u5668\u4EBA\u6210\u529F\u53D1\u9001\u5361\u7247\uFF01" };
+              }
+              return { success: false, message: `\u98DE\u4E66\u5E94\u7528\u6D88\u606F\u53D1\u9001\u5931\u8D25 (Code ${msgData.code}): ${msgData.msg || "\u672A\u77E5\u9519\u8BEF"}` };
+            }
+            return {
+              success: false,
+              message: "\u98DE\u4E66\u81EA\u5EFA\u5E94\u7528 (App ID & Secret) \u51ED\u8BC1\u6821\u9A8C\u6210\u529F\uFF01\u4F46\u672A\u914D\u7F6E\u63A5\u6536\u4EBA ID (receiveId)\uFF0C\u673A\u5668\u4EBA\u65E0\u6CD5\u786E\u5B9A\u63A8\u9001\u76EE\u6807\u3002\n\n\u{1F4A1} \u6781\u529B\u63A8\u8350\uFF1A\u5728\u98DE\u4E66\u7FA4\u804A\u4E2D\u76F4\u63A5\u6DFB\u52A0\u300C\u81EA\u5B9A\u4E49\u673A\u5668\u4EBA\u300D\uFF0C\u83B7\u53D6 Webhook \u5730\u5740\u586B\u5165\u4FDD\u5B58\uFF0C\u514D\u914D\u7F6E\u63A5\u6536\u4EBA\u5373\u53EF\u63A8\u9001\u5230\u7FA4\uFF01"
+            };
+          } catch (e2) {
+            return { success: false, message: `\u98DE\u4E66 OpenAPI \u8BF7\u6C42\u5F02\u5E38: ${e2.message}` };
+          }
         }
+        const helpMsg = "\u672A\u914D\u7F6E\u6709\u6548\u7684\u98DE\u4E66\u53D1\u9001\u901A\u9053\u3002\n\n\u{1F449} \u5FEB\u901F\u914D\u7F6E\u6B65\u9AA4\uFF1A\n1. \u5728\u4EFB\u610F\u98DE\u4E66\u7FA4\u7684\u300C\u7FA4\u8BBE\u7F6E -> \u7FA4\u673A\u5668\u4EBA -> \u6DFB\u52A0\u81EA\u5B9A\u4E49\u673A\u5668\u4EBA\u300D\uFF1B\n2. \u590D\u5236\u751F\u6210\u7684 Webhook \u5730\u5740\u5E76\u586B\u5165\u4FDD\u5B58\uFF1B\n3. \u6CE8\u610F\uFF1A\u98DE\u4E66\u5F00\u653E\u5E73\u53F0\u7684\u300C\u957F\u8FDE\u63A5/WebSocket\u300D\u6A21\u5F0F\u4EC5\u7528\u4E8E\u4E8B\u4EF6\u4E0B\u53D1\uFF0C\u4E3B\u52A8\u63A8\u9001\u6D88\u606F\u9700\u4F7F\u7528 Webhook \u5730\u5740\u3002";
+        console.warn(`\u26A0\uFE0F [FeishuNotifier] ${helpMsg}`);
+        return { success: false, message: helpMsg };
+      }
+      /**
+       * 发送卡片通知（保持原有返回 boolean 的签名向后兼容）
+       */
+      async sendApprovalNotification(job, filter, tailor, options) {
+        const res = await this.sendNotification(job, filter, tailor, options);
+        return res.success;
       }
     };
   }
@@ -2062,7 +2202,7 @@ var init_core = __esm({
        */
       async reloadConfig() {
         this.lastConfigLoad = Date.now();
-        await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
+        await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage(), this.feishu.reloadConfig()]);
         console.log("\u{1F504} [JobHunterCore] \u89C4\u5219\u504F\u597D\u4E0E\u4E2A\u4EBA\u6863\u6848\u914D\u7F6E\u5DF2\u52A8\u6001\u91CD\u8F7D\u751F\u6548\uFF01");
       }
       /**
@@ -2233,7 +2373,7 @@ var init_core = __esm({
       /**
        * 模拟用户在飞书或本地对某个岗位做出决策
        */
-      handleUserAction(jobId, action, reasonOrTweak) {
+      async handleUserAction(jobId, action, reasonOrTweak) {
         const record = this.tracker.getRecord(jobId);
         if (!record) {
           console.error(`\u672A\u627E\u5230\u5C97\u4F4D\u8BB0\u5F55: ${jobId}`);
@@ -2260,6 +2400,7 @@ var init_core = __esm({
           });
           console.log(`\u270F\uFE0F [\u7B80\u5386\u5DF2\u91CD\u65B0\u88C1\u526A] \u4F9D\u636E\u8981\u6C42\u5237\u65B0\u7B80\u5386\u5FEB\u7167\uFF0C\u5DF2\u66F4\u65B0\u5F85\u786E\u8BA4\u72B6\u6001\u3002`);
         }
+        await this.tracker.flush?.();
       }
     };
   }
@@ -43994,6 +44135,179 @@ function applyPreferencesUpdate(current, data) {
 }
 
 // src/modules/server/CollectorServer.ts
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+function renderFeishuActionHtml(options) {
+  const isSuccess = options.badgeType === "success";
+  const isDanger = options.badgeType === "danger";
+  const badgeStyle = isSuccess ? "background-color: #ecfdf5; color: #047857; border-color: #a7f3d0;" : isDanger ? "background-color: #fff1f2; color: #be123c; border-color: #fecdd3;" : "background-color: #eef2ff; color: #4338ca; border-color: #c7d2fe;";
+  const iconBg = isSuccess ? "#10b981" : isDanger ? "#f43f5e" : "#6366f1";
+  const iconSvg = isSuccess ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>' : isDanger ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>';
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(options.actionTitle)} - Job-Hunter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      max-width: 480px;
+      width: 100%;
+      padding: 2rem 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: ${iconBg};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      border: 1px solid;
+      margin-bottom: 1.25rem;
+      ${badgeStyle}
+    }
+    .job-box {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+    .job-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+    .job-meta {
+      font-size: 0.85rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .job-salary {
+      color: #d97706;
+      font-weight: 600;
+    }
+    .description {
+      font-size: 0.9rem;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      background: #f8fafc;
+      padding: 0.85rem;
+      border-radius: 0.5rem;
+      border-left: 3px solid ${iconBg};
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.6rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+    }
+    .footer-tip {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrapper">
+      <svg width="30" height="30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        ${iconSvg}
+      </svg>
+    </div>
+    <h1 class="title">${escapeHtml(options.actionTitle)}</h1>
+    <div class="badge">${escapeHtml(options.badgeText)}</div>
+
+    <div class="job-box">
+      <div class="job-title">${escapeHtml(options.title)}</div>
+      <div class="job-meta">
+        \u{1F3E2} <strong>${escapeHtml(options.company)}</strong>
+        ${options.city ? ` \uFF5C \u{1F4CD} ${escapeHtml(options.city)}` : ""}
+        ${options.platform ? ` \uFF5C \u{1F3F7}\uFE0F ${escapeHtml(options.platform)}` : ""}
+      </div>
+      ${options.salary ? `<div class="job-meta job-salary">\u{1F4B0} ${escapeHtml(options.salary)}</div>` : ""}
+    </div>
+
+    <div class="description">${escapeHtml(options.description)}</div>
+
+    <div class="btn-group">
+      <a href="/" class="btn btn-primary">\u{1F4CA} \u8FDB\u5165\u6C42\u804C\u5DE5\u4F5C\u53F0\u770B\u677F</a>
+      ${options.jobUrl && options.jobUrl !== "https://example.com" ? `<a href="${escapeHtml(options.jobUrl)}" target="_blank" rel="noopener" class="btn btn-secondary">\u{1F517} \u6253\u5F00\u539F\u62DB\u8058\u7F51\u7AD9\u804C\u4F4D\u9875</a>` : ""}
+      <button onclick="try{window.close();}catch(e){}window.history.back();" class="btn btn-secondary">\u2716\uFE0F \u5173\u95ED\u672C\u9875\u9762</button>
+    </div>
+
+    <div class="footer-tip">Job-Hunter Agent \xB7 \u98DE\u4E66\u591A\u7AEF\u667A\u80FD\u4E92\u8054</div>
+  </div>
+</body>
+</html>`;
+}
 var SESSION_COOKIE = "jobhunter_session";
 var CollectorServer = class {
   server = null;
@@ -44034,8 +44348,13 @@ var CollectorServer = class {
       return;
     }
     const host = req.headers.host || `127.0.0.1:${this.port}`;
-    const url = new URL(req.url || "/", `http://${host}`);
+    const proto = req.headers["x-forwarded-proto"] === "https" || host.includes("vercel.app") ? "https" : "http";
+    const url = new URL(req.url || "/", `${proto}://${host}`);
     let pathname = url.pathname;
+    try {
+      this.agent.feishu?.setRuntimeHost?.(`${proto}://${host}`);
+    } catch {
+    }
     if (pathname.startsWith("/api/")) {
       const rest = pathname.slice("/api/".length);
       if (rest === "healthz" || rest.startsWith("healthz/") || rest.startsWith("auth/") || rest === "bookmarklet.js") {
@@ -44259,7 +44578,7 @@ var CollectorServer = class {
         try {
           await this.agent.tracker.reload?.();
           const { action, reason } = JSON.parse(body);
-          this.agent.handleUserAction(jobId, action === "APPROVED" ? "APPROVED" : "REJECTED", reason);
+          await this.agent.handleUserAction(jobId, action === "APPROVED" ? "APPROVED" : "REJECTED", reason);
           return sendJson(200, { code: 0, message: "\u64CD\u4F5C\u6210\u529F" });
         } catch (e2) {
           return sendJson(400, { code: -1, error: e2.message });
@@ -44270,6 +44589,12 @@ var CollectorServer = class {
     if (req.method === "POST" && pathname === "/api/scan") {
       if (isDemo) {
         return sendJson(403, { code: -1, error: "\u6F14\u793A\u6A21\u5F0F\u4E0B\u7981\u6B62\u89E6\u53D1\u771F\u5B9E\u722C\u866B\u626B\u63CF" });
+      }
+      if (process.env.VERCEL || process.platform !== "darwin") {
+        return sendJson(400, {
+          code: -1,
+          error: "\u4E91\u7AEF\u90E8\u7F72\u6216\u975E macOS \u73AF\u5883\u65E0\u6CD5\u76F4\u63A5\u8BFB\u53D6\u672C\u5730\u524D\u53F0 Chrome\u3002\n\u8BF7\u524D\u5F80\u300C/setup\u300D\u9875\u9762\u5B89\u88C5\u4E13\u5C5E Chrome \u6269\u5C55\u6216\u4F7F\u7528\u4E00\u952E\u4E66\u7B7E\u91C7\u96C6\u5668\uFF0C\u5728\u62DB\u8058\u7F51\u7AD9\u5373\u53EF\u968F\u65F6\u540C\u6B65\u804C\u4F4D\uFF01"
+        });
       }
       try {
         const { StandaloneJobHunter: StandaloneJobHunter2 } = await Promise.resolve().then(() => (init_standalone(), standalone_exports));
@@ -44375,6 +44700,7 @@ var CollectorServer = class {
             webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
             appId: "cli_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
             appSecret: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+            serviceBaseUrl: "https://job-hunter-agent-orpin.vercel.app",
             isDemo: true
           });
         }
@@ -44384,9 +44710,11 @@ var CollectorServer = class {
         const feishuConf = await readJson("data/preferences/feishu.json", {
           webhookUrl: process.env.FEISHU_WEBHOOK_URL || "",
           appId: process.env.FEISHU_APP_ID || "",
-          appSecret: process.env.FEISHU_APP_SECRET || ""
+          appSecret: process.env.FEISHU_APP_SECRET || "",
+          serviceBaseUrl: process.env.FEISHU_SERVICE_BASE_URL || ""
         });
-        return sendJson(200, feishuConf);
+        const detectedBaseUrl = this.agent.feishu?.getBaseUrl?.() || "https://job-hunter-agent-orpin.vercel.app";
+        return sendJson(200, { ...feishuConf, detectedBaseUrl });
       }
       if (req.method === "POST") {
         let body = "";
@@ -44395,7 +44723,11 @@ var CollectorServer = class {
           try {
             const data = JSON.parse(body);
             await writeJson("data/preferences/feishu.json", data);
-            return sendJson(200, { code: 0, message: "\u98DE\u4E66\u914D\u7F6E\u5DF2\u66F4\u65B0" });
+            try {
+              await this.agent.reloadConfig();
+            } catch (e2) {
+            }
+            return sendJson(200, { code: 0, message: "\u98DE\u4E66\u914D\u7F6E\u5DF2\u66F4\u65B0\u5E76\u5373\u523B\u751F\u6548\uFF01" });
           } catch (e2) {
             return sendJson(400, { code: -1, error: e2.message });
           }
@@ -44405,10 +44737,13 @@ var CollectorServer = class {
     }
     if (req.method === "POST" && pathname === "/api/config/feishu/test") {
       if (isDemo) {
-        return sendJson(200, { success: true, message: "\u3010Demo \u6F14\u793A\u6A21\u5F0F\u3011\u5DF2\u6A21\u62DF\u53D1\u9001\u98DE\u4E66\u6D4B\u8BD5\u5361\u7247" });
+        return sendJson(200, { success: true, message: "\u3010Demo \u6F14\u793A\u6A21\u5F0F\u3011\u5DF2\u6A21\u62DF\u53D1\u9001\u98DE\u4E66\u6D4B\u8BD5\u5361\u7247\uFF08\u771F\u5B9E\u53D1\u9001\u8BF7\u767B\u5F55\u7BA1\u7406\u5458\uFF09" });
       }
       const feishu = this.agent.feishu;
-      const ok = await feishu.sendApprovalNotification(
+      if (feishu?.reloadConfig) {
+        await feishu.reloadConfig();
+      }
+      const result = await feishu.sendNotification(
         {
           id: "test_demo",
           title: "\u8D44\u6DF1\u5168\u6808\u67B6\u6784\u5E08 (\u6D4B\u8BD5\u63A8\u9001)",
@@ -44436,9 +44771,233 @@ var CollectorServer = class {
           markdownContent: "# \u6D4B\u8BD5\u7B80\u5386",
           greetingMessage: "\u60A8\u597D\uFF01\u8FD9\u662F\u4E00\u6761\u6D4B\u8BD5\u5361\u7247\uFF0C\u8BF4\u660E\u98DE\u4E66\u901A\u9053\u5DF2\u5B8C\u7F8E\u6253\u901A\uFF01",
           keyMatchingPoints: ["\u5168\u6808\u67B6\u6784", "\u9AD8\u5E76\u53D1"]
-        }
+        },
+        { skipUrlCheck: true }
       );
-      return sendJson(200, { success: ok, message: ok ? "\u63A8\u9001\u6210\u529F" : "\u63A8\u9001\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u914D\u7F6E" });
+      return sendJson(200, result);
+    }
+    if (pathname === "/api/feishu/webhook") {
+      if (req.method === "GET") {
+        return sendJson(200, { code: 0, status: "ok", message: "\u98DE\u4E66 Webhook \u4EA4\u4E92\u7AEF\u70B9\u5DF2\u5C31\u7EEA\uFF01" });
+      }
+      if (req.method === "POST") {
+        let body = "";
+        req.on("data", (c2) => body += c2);
+        req.on("end", async () => {
+          try {
+            const data = body ? JSON.parse(body) : {};
+            if (data.type === "url_verification" || data.challenge) {
+              console.log(`\u{1F91D} [Feishu Webhook] \u6536\u5230\u5F00\u653E\u5E73\u53F0 URL \u9A8C\u8BC1\u63E1\u624B Challenge: ${data.challenge}`);
+              return sendJson(200, { challenge: data.challenge });
+            }
+            let actionValue = data.action?.value || data.event?.action?.value;
+            if (typeof actionValue === "string") {
+              try {
+                actionValue = JSON.parse(actionValue);
+              } catch {
+              }
+            }
+            if (actionValue && typeof actionValue === "object") {
+              const actionType = actionValue.action;
+              const jobId = actionValue.jobId;
+              console.log(`\u{1F4E5} [Feishu Webhook] \u6536\u5230\u5361\u7247\u52A8\u4F5C\u89E6\u53D1: action=${actionType}, jobId=${jobId}`);
+              if (jobId === "test_demo") {
+                return sendJson(200, {
+                  toast: {
+                    type: "success",
+                    content: "\u{1F389} \u98DE\u4E66\u5361\u7247\u4EA4\u4E92\u6D4B\u8BD5\u6210\u529F\uFF01\u7CFB\u7EDF\u5DF2\u6B63\u5E38\u63A5\u6536\u5E76\u5904\u7406\u60A8\u7684\u64CD\u4F5C\u3002"
+                  }
+                });
+              }
+              await this.agent.tracker.reload?.();
+              const record = this.agent.tracker.getRecord(jobId);
+              if (!record) {
+                return sendJson(200, {
+                  toast: {
+                    type: "warning",
+                    content: "\u26A0\uFE0F \u672A\u627E\u5230\u8BE5\u5C97\u4F4D\u8BB0\u5F55\uFF08\u53EF\u80FD\u5DF2\u88AB\u91CD\u7B5B\u6DD8\u6C70\u6216\u6E05\u7406\uFF09"
+                  }
+                });
+              }
+              if (actionType === "APPROVE") {
+                await this.agent.handleUserAction(jobId, "APPROVED");
+                return sendJson(200, {
+                  toast: {
+                    type: "success",
+                    content: `\u2705 \u5DF2\u786E\u8BA4\u6295\u9012\u3010${record.job.company} \xB7 ${record.job.title}\u3011\uFF01\u770B\u677F\u72B6\u6001\u5DF2\u66F4\u65B0`
+                  }
+                });
+              } else if (actionType === "REJECT") {
+                await this.agent.handleUserAction(jobId, "REJECTED", "\u98DE\u4E66\u5361\u7247\u76F4\u63A5\u62D2\u7EDD");
+                return sendJson(200, {
+                  toast: {
+                    type: "info",
+                    content: `\u{1F6D1} \u5DF2\u62D2\u7EDD\u3010${record.job.company}\u3011\u5E76\u8BB0\u5F55\u81F3\u8D1F\u53CD\u9988\u5E93`
+                  }
+                });
+              } else if (actionType === "REQUEST_TWEAK") {
+                await this.agent.handleUserAction(jobId, "REQUEST_TWEAK", "\u98DE\u4E66\u5361\u7247\u8981\u6C42\u8C03\u6574\u7B80\u5386");
+                return sendJson(200, {
+                  toast: {
+                    type: "info",
+                    content: `\u270F\uFE0F \u5DF2\u89E6\u53D1\u9488\u5BF9\u3010${record.job.company}\u3011\u7684\u7B80\u5386\u8C03\u6574\u6D41\u7A0B`
+                  }
+                });
+              }
+            }
+            return sendJson(200, { code: 0, msg: "success" });
+          } catch (e2) {
+            console.error("[Feishu Webhook] \u5904\u7406\u5F02\u5E38:", e2);
+            return sendJson(200, {
+              toast: {
+                type: "error",
+                content: `\u5904\u7406\u64CD\u4F5C\u5F02\u5E38: ${e2.message}`
+              }
+            });
+          }
+        });
+        return;
+      }
+    }
+    if (pathname === "/api/feishu/action") {
+      const handleAction = async (action, jobId) => {
+        if (!jobId) {
+          res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: false,
+            actionTitle: "\u53C2\u6570\u9519\u8BEF",
+            badgeText: "\u7F3A\u5C11 Job ID",
+            badgeType: "danger",
+            company: "\u7CFB\u7EDF\u63D0\u793A",
+            title: "\u64CD\u4F5C\u65E0\u6CD5\u7EE7\u7EED",
+            description: "\u8BF7\u6C42\u4E2D\u672A\u5305\u542B\u6709\u6548\u7684\u5C97\u4F4D ID\uFF0C\u8BF7\u8FD4\u56DE\u6C42\u804C\u770B\u677F\u6838\u5BF9\u3002"
+          }));
+          return;
+        }
+        if (jobId === "test_demo") {
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: "\u98DE\u4E66\u4EA4\u4E92\u6D4B\u8BD5\u5B8C\u5168\u6210\u529F\uFF01",
+            badgeText: action === "APPROVE" ? "\u6D4B\u8BD5\u52A8\u4F5C\uFF1A\u786E\u8BA4\u6295\u9012" : action === "REJECT" ? "\u6D4B\u8BD5\u52A8\u4F5C\uFF1A\u62D2\u7EDD\u5C97\u4F4D" : "\u6D4B\u8BD5\u52A8\u4F5C\uFF1A\u5FAE\u8C03\u7B80\u5386",
+            badgeType: "success",
+            company: "\u6D4B\u8BD5\u79D1\u6280\u96C6\u56E2",
+            title: "\u8D44\u6DF1\u5168\u6808\u67B6\u6784\u5E08 (\u6D4B\u8BD5\u63A8\u9001)",
+            salary: "35-50K\xB715\u85AA",
+            city: "\u4E0A\u6D77",
+            platform: "BOSS\u76F4\u8058",
+            description: "\u{1F389} \u606D\u559C\uFF01\u60A8\u5728\u98DE\u4E66\u4E2D\u70B9\u51FB\u7684\u5BA1\u6279\u6309\u94AE\u5DF2\u6210\u529F\u6253\u901A\u5E76\u9001\u8FBE\u6C42\u804C\u7CFB\u7EDF\uFF01\n\n\u65E0\u8BBA\u4F7F\u7528\u98DE\u4E66\u7FA4\u81EA\u5B9A\u4E49\u673A\u5668\u4EBA\u8FD8\u662F\u81EA\u5EFA\u5E94\u7528\uFF0C\u672C\u7AEF\u70B9\u90FD\u80FD\u786E\u4FDD\u5361\u7247\u6309\u94AE\u70B9\u51FB\u540E\u72B6\u6001\u81EA\u52A8\u751F\u6548\uFF0C\u5F7B\u5E95\u544A\u522B\u300C\u672A\u914D\u7F6E\u5361\u7247\u4EA4\u4E92\u529F\u80FD\u300D\u63D0\u793A\uFF01",
+            jobUrl: "https://example.com"
+          }));
+          return;
+        }
+        await this.agent.tracker.reload?.();
+        const record = this.agent.tracker.getRecord(jobId);
+        if (!record) {
+          res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: false,
+            actionTitle: "\u672A\u627E\u5230\u8BE5\u5C97\u4F4D\u8BB0\u5F55",
+            badgeText: "\u5C97\u4F4D\u4E0D\u5B58\u5728\u6216\u5DF2\u6E05\u7406",
+            badgeType: "danger",
+            company: "\u672A\u77E5\u4F01\u4E1A",
+            title: "\u5C97\u4F4D\u4FE1\u606F\u5931\u6548",
+            description: "\u672A\u5728\u5F53\u524D\u770B\u677F\u5E93\u4E2D\u627E\u5230\u8BE5\u5C97\u4F4D\u8BB0\u5F55\uFF08\u53EF\u80FD\u5DF2\u88AB\u91CD\u7B5B\u6DD8\u6C70\u3001\u88AB\u7BA1\u7406\u5458\u6E05\u7406\u6216\u6D4B\u8BD5\u6570\u636E\u5DF2\u91CD\u7F6E\uFF09\u3002\u8BF7\u8FD4\u56DE\u5DE5\u4F5C\u53F0\u770B\u677F\u67E5\u770B\u6700\u65B0\u804C\u4F4D\u3002"
+          }));
+          return;
+        }
+        const company = record.job.company;
+        const title = record.job.title;
+        const salary = record.job.salaryText;
+        const city = record.job.city;
+        const platform = record.job.platform;
+        const jobUrl = record.job.url;
+        if (action === "APPROVE") {
+          await this.agent.handleUserAction(jobId, "APPROVED");
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: "\u2705 \u6295\u9012\u610F\u5411\u5DF2\u786E\u8BA4\uFF01",
+            badgeText: "\u5DF2\u66F4\u65B0\u4E3A\uFF1A\u5DF2\u6295\u9012 / \u5F85\u8DDF\u8FDB",
+            badgeType: "success",
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `\u5DF2\u6210\u529F\u5C06\u3010${company} \xB7 ${title}\u3011\u79FB\u5165\u300C\u5DF2\u6295\u9012\u300D\u770B\u677F\uFF01\u5B9A\u5236\u7B80\u5386\u4E0E\u6C9F\u901A\u8BDD\u672F\u5DF2\u5C31\u7EEA\uFF0C\u8BF7\u4FDD\u6301\u5173\u6CE8\u540E\u7EED HR \u56DE\u590D\u4E0E\u9762\u8BD5\u8FDB\u5C55\u3002`,
+            jobUrl
+          }));
+          return;
+        }
+        if (action === "REJECT") {
+          await this.agent.handleUserAction(jobId, "REJECTED", "\u98DE\u4E66\u5361\u7247\u64CD\u4F5C\u62D2\u7EDD");
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: "\u{1F6D1} \u5DF2\u6807\u8BB0\u4E0D\u5408\u9002",
+            badgeText: "\u5DF2\u79FB\u5165\u62D2\u7EDD\u5E93",
+            badgeType: "danger",
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `\u5DF2\u5C06\u3010${company} \xB7 ${title}\u3011\u6807\u8BB0\u4E3A\u62D2\u7EDD\uFF0C\u5E76\u5DF2\u6C89\u6DC0\u81F3 AI \u8D1F\u53CD\u9988\u504F\u597D\u8BB0\u5FC6\u5E93\uFF0C\u540E\u7EED\u7CFB\u7EDF\u5C06\u81EA\u52A8\u964D\u4F4E\u6B64\u7C7B\u4F01\u4E1A\u6216 JD \u7684\u63A8\u8350\u6743\u91CD\u3002`,
+            jobUrl
+          }));
+          return;
+        }
+        if (action === "REQUEST_TWEAK") {
+          await this.agent.handleUserAction(jobId, "REQUEST_TWEAK", "\u98DE\u4E66\u5361\u7247\u8BF7\u6C42\u5FAE\u8C03\u7B80\u5386");
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(renderFeishuActionHtml({
+            success: true,
+            actionTitle: "\u270F\uFE0F \u7B80\u5386\u5FAE\u8C03\u9700\u6C42\u5DF2\u63A5\u6536",
+            badgeText: "\u72B6\u6001\uFF1A\u5F85\u8C03\u6574\u590D\u6838",
+            badgeType: "info",
+            company,
+            title,
+            salary,
+            city,
+            platform,
+            description: `\u5DF2\u6536\u5230\u9488\u5BF9\u3010${company} \xB7 ${title}\u3011\u7684\u7B80\u5386\u8C03\u6574\u8BF7\u6C42\uFF01\u5EFA\u8BAE\u767B\u5F55\u5DE5\u4F5C\u53F0\u770B\u677F\uFF0C\u76F4\u63A5\u4E0E AI \u5BF9\u8BDD\u5FAE\u8C03\u4E13\u5C5E\u7B80\u5386\u4EAE\u70B9\u3002`,
+            jobUrl
+          }));
+          return;
+        }
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(renderFeishuActionHtml({
+          success: false,
+          actionTitle: "\u672A\u77E5\u64CD\u4F5C\u7C7B\u578B",
+          badgeText: `action=${action}`,
+          badgeType: "danger",
+          company,
+          title,
+          description: "\u4E0D\u652F\u6301\u7684\u64CD\u4F5C\u7C7B\u578B\uFF0C\u8BF7\u5728\u98DE\u4E66\u5361\u7247\u91CD\u65B0\u9009\u62E9\u64CD\u4F5C\u3002"
+        }));
+      };
+      if (req.method === "GET") {
+        const action = url.searchParams.get("action") || "APPROVE";
+        const jobId = url.searchParams.get("jobId") || "";
+        await handleAction(action, jobId);
+        return;
+      }
+      if (req.method === "POST") {
+        let body = "";
+        req.on("data", (c2) => body += c2);
+        req.on("end", async () => {
+          try {
+            const data = body ? JSON.parse(body) : {};
+            const action = data.action || url.searchParams.get("action") || "APPROVE";
+            const jobId = data.jobId || url.searchParams.get("jobId") || "";
+            await handleAction(action, jobId);
+          } catch {
+            await handleAction(url.searchParams.get("action") || "APPROVE", url.searchParams.get("jobId") || "");
+          }
+        });
+        return;
+      }
     }
     if (pathname === "/api/config/preferences") {
       if (isDemo) {
@@ -44753,8 +45312,9 @@ var CollectorServer = class {
         llmEffective: { hasKey: Boolean(this.llmClient.getConfig().apiKey) }
       });
     }
-    const publicStaticPath = path10.resolve(process.cwd(), "public", pathname.replace(/^\/+/, ""));
-    if (fs11.existsSync(publicStaticPath) && !fs11.statSync(publicStaticPath).isDirectory()) {
+    const publicDir = path10.resolve(process.cwd(), "public");
+    const publicStaticPath = path10.resolve(publicDir, pathname.replace(/^\/+/, ""));
+    if (publicStaticPath.startsWith(publicDir) && fs11.existsSync(publicStaticPath) && !fs11.statSync(publicStaticPath).isDirectory()) {
       const ext = path10.extname(publicStaticPath).toLowerCase();
       const mimeTypes = {
         ".html": "text/html; charset=utf-8",

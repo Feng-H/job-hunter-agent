@@ -151,6 +151,12 @@
 
     async function loadToken() {
       try {
+        const statusRes = await fetch('/auth/status');
+        const statusData = await statusRes.json();
+        if (!statusData.loggedIn) {
+          location.href = '/login?redirect=/setup';
+          return;
+        }
         const res = await fetch('/auth/collector-token');
         const data = await res.json();
         if (data.code === 0 && data.collectorToken) {

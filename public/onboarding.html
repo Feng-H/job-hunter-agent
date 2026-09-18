@@ -825,6 +825,17 @@
         btn.innerText = '🔥 确认无误，点火启动系统！';
       }
     }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const res = await fetch('/auth/status');
+        const data = await res.json();
+        if (!data.loggedIn) {
+          location.href = '/login?redirect=/onboarding';
+          return;
+        }
+      } catch (e) {}
+    });
   </script>
 </body>
 </html>

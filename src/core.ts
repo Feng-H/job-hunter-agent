@@ -67,7 +67,7 @@ export class JobHunterCore {
    */
   public async reloadConfig(): Promise<void> {
     this.lastConfigLoad = Date.now();
-    await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
+    await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage(), this.feishu.reloadConfig()]);
     console.log('🔄 [JobHunterCore] 规则偏好与个人档案配置已动态重载生效！');
   }
 
@@ -300,11 +300,11 @@ export class JobHunterCore {
   /**
    * 模拟用户在飞书或本地对某个岗位做出决策
    */
-  public handleUserAction(
+  public async handleUserAction(
     jobId: string,
     action: 'APPROVED' | 'REJECTED' | 'REQUEST_TWEAK',
     reasonOrTweak?: string
-  ) {
+  ): Promise<void> {
     const record = this.tracker.getRecord(jobId);
     if (!record) {
       console.error(`未找到岗位记录: ${jobId}`);
@@ -335,6 +335,8 @@ export class JobHunterCore {
       });
       console.log(`✏️ [简历已重新裁剪] 依据要求刷新简历快照，已更新待确认状态。`);
     }
+
+    await (this.tracker as any).flush?.();
   }
 }
 

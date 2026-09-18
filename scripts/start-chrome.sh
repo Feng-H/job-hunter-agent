@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 
 # 定义求职专用 Chrome 用户数据目录，避免污染日常浏览器
-CHROME_PROFILE_DIR="$HOME/Library/Application Support/Google/Chrome/JobHunterProfile"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  CHROME_PROFILE_DIR="$HOME/Library/Application Support/Google/Chrome/JobHunterProfile"
+  CHROME_EXEC="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+else
+  CHROME_PROFILE_DIR="$HOME/.config/google-chrome/JobHunterProfile"
+  if command -v google-chrome-stable >/dev/null 2>&1; then
+    CHROME_EXEC="$(command -v google-chrome-stable)"
+  elif command -v google-chrome >/dev/null 2>&1; then
+    CHROME_EXEC="$(command -v google-chrome)"
+  elif command -v chromium >/dev/null 2>&1; then
+    CHROME_EXEC="$(command -v chromium)"
+  elif command -v chromium-browser >/dev/null 2>&1; then
+    CHROME_EXEC="$(command -v chromium-browser)"
+  else
+    CHROME_EXEC=""
+  fi
+fi
+
 mkdir -p "$CHROME_PROFILE_DIR"
 
-CHROME_EXEC="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-
-if [ ! -f "$CHROME_EXEC" ]; then
-  echo "❌ 未找到 Google Chrome，请确认路径: $CHROME_EXEC"
+if [ -z "$CHROME_EXEC" ] || [ ! -e "$CHROME_EXEC" ]; then
+  echo "❌ 未找到 Google Chrome 或 Chromium，请确认已安装或指定路径。"
   exit 1
 fi
 

@@ -184,6 +184,10 @@ export class JobTracker {
     };
   }
 
+  public async flush(): Promise<void> {
+    await this.save();
+  }
+
   private async save(): Promise<void> {
     try {
       await writeJson(this.dbKey, Array.from(this.records.values()));

@@ -29,7 +29,13 @@ case "$1" in
 
   open|dashboard)
     echo "🌐 正在打开 Job-Hunter OS Web 看板..."
-    open "http://127.0.0.1:8765"
+    if command -v open >/dev/null 2>&1; then
+      open "http://127.0.0.1:8765"
+    elif command -v xdg-open >/dev/null 2>&1; then
+      xdg-open "http://127.0.0.1:8765"
+    else
+      echo "👉 请在浏览器中打开: http://127.0.0.1:8765"
+    fi
     ;;
 
   scan)

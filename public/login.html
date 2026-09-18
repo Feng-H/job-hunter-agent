@@ -139,7 +139,7 @@
         const data = await res.json();
         if (data.code === 0) {
           showMsg('✅ ' + data.message + '，正在进入系统...', true);
-          setTimeout(() => location.href = '/', 800);
+          setTimeout(() => location.href = getRedirectTarget(), 800);
         } else {
           showMsg(data.message, false);
           unbusy(btn);
@@ -167,7 +167,7 @@
         const data = await res.json();
         if (data.code === 0) {
           showMsg('✅ 登录成功，正在进入系统...', true);
-          setTimeout(() => location.href = '/', 600);
+          setTimeout(() => location.href = getRedirectTarget(), 600);
         } else {
           showMsg(data.message, false);
           unbusy(btn);
@@ -178,11 +178,17 @@
       }
     }
 
+    function getRedirectTarget() {
+      const p = new URLSearchParams(location.search).get('redirect');
+      if (p && p.startsWith('/') && !p.startsWith('//')) return p;
+      return '/';
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       try {
         const res = await fetch('/auth/status');
         const data = await res.json();
-        if (data.loggedIn) { location.href = '/'; return; }
+        if (data.loggedIn) { location.href = getRedirectTarget(); return; }
         if (data.setupMode) {
           document.getElementById('box-setup').classList.remove('hidden');
         } else {
