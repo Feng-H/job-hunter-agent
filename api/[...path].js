@@ -43050,12 +43050,14 @@ var SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
 var MAX_FAILED_ATTEMPTS = 5;
 var FAILED_WINDOW_MS = 15 * 60 * 1e3;
 var MIN_PASSWORD_LENGTH = 8;
+var REFRESH_TTL_MS = 30 * 1e3;
 var AuthService = class {
   stateKey;
   state;
   ready;
   /** 状态加载失败标记：为 true 时禁止注册/登录，防止把"读不到"误当"空库"覆盖真实数据 */
   stateLoadFailed = false;
+  lastRefreshAt = 0;
   constructor() {
     this.stateKey = "data/auth/auth_state.json";
     this.state = { accounts: [], sessions: [], failedAttempts: {} };
@@ -43063,6 +43065,15 @@ var AuthService = class {
   }
   async ensureReady() {
     await this.ready;
+  }
+  /**
+   * 会话视图节流刷新：云端多实例并发时，其他实例签发/注销的会话最迟 30 秒内对本实例可见。
+   * CollectorServer 每个请求入口调用。
+   */
+  async maybeRefresh() {
+    if (this.stateLoadFailed) return;
+    if (Date.now() - this.lastRefreshAt < REFRESH_TTL_MS) return;
+    await this.loadState();
   }
   async loadState() {
     try {
@@ -43073,6 +43084,7 @@ var AuthService = class {
         failedAttempts: loaded.failedAttempts || {}
       };
       this.stateLoadFailed = false;
+      this.lastRefreshAt = Date.now();
     } catch (e2) {
       this.stateLoadFailed = true;
       console.error("[Auth] \u8D26\u53F7\u5E93\u8BFB\u53D6\u5931\u8D25\uFF0C\u5DF2\u9501\u5B9A\u6CE8\u518C/\u767B\u5F55\u4EE5\u9632\u8986\u76D6\u771F\u5B9E\u6570\u636E:", e2.message);
@@ -43086,28 +43098,35 @@ var AuthService = class {
   storageHealth() {
     return this.stateLoadFailed ? { ok: false, error: "\u8D26\u53F7\u5E93\u8BFB\u53D6\u5931\u8D25\uFF08KV \u5F02\u5E38\uFF09\uFF0C\u6CE8\u518C\u4E0E\u767B\u5F55\u5DF2\u4E34\u65F6\u9501\u5B9A\u4EE5\u4FDD\u62A4\u6570\u636E" } : { ok: true, error: null };
   }
+  /**
+   * 读-改-写变更：先从存储层拉取最新状态，应用变更后整体写回。
+   * 这是云端多实例并发下的防覆盖核心——绝不基于本实例的旧内存快照整体覆盖
+   * （否则会抹掉其他实例刚签发的会话，表现为"登录态随机失效"）。
+   */
+  async mutate(fn2, opts = {}) {
+    const latest = await readJsonStrict(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
+    fn2(latest);
+    this.state = latest;
+    if (opts.background) {
+      writeJson(this.stateKey, latest).catch(
+        (e2) => console.error("[Auth] \u540E\u53F0\u6301\u4E45\u5316\u5931\u8D25\uFF08\u9650\u6D41\u8BA1\u6570/\u8FC7\u671F\u4F1A\u8BDD\u6E05\u7406\u53EF\u80FD\u672A\u843D\u5E93\uFF09:", e2.message)
+      );
+    } else {
+      await writeJson(this.stateKey, latest);
+    }
+  }
   hasAccount(username) {
     return this.state.accounts.some((a2) => a2.username === username);
   }
   hashPassword(password, salt) {
     return crypto3.scryptSync(password, salt, 64).toString("hex");
   }
-  /** 关键写入：await 真正落库，失败向上抛错（绝不假成功） */
-  async persist() {
-    await writeJson(this.stateKey, this.state);
-  }
-  /** 非关键写入（会话清理/限流计数）：后台执行，失败仅记日志 */
-  persistBackground() {
-    writeJson(this.stateKey, this.state).catch(
-      (e2) => console.error("[Auth] \u540E\u53F0\u6301\u4E45\u5316\u5931\u8D25\uFF08\u4F1A\u8BDD/\u9650\u6D41\u8BA1\u6570\u53EF\u80FD\u672A\u843D\u5E93\uFF09:", e2.message)
-    );
-  }
   getAccount(username) {
     return this.state.accounts.find((a2) => a2.username === username);
   }
   /**
    * 首次初始化：创建管理员账号（仅在无任何账号时可用）
-   * 硬保证：写入云端成功且回读校验通过才算创建成功，否则回滚并明确报错。
+   * 硬保证：写入云端成功且回读校验通过才算创建成功，否则明确报错。
    */
   async createAccount(username, password) {
     username = (username || "").trim();
@@ -43134,18 +43153,23 @@ var AuthService = class {
       collectorToken: crypto3.randomBytes(24).toString("hex"),
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    this.state.accounts.push(account);
     try {
-      await this.persist();
+      await this.mutate((s2) => {
+        if (s2.accounts.length > 0) {
+          throw new Error("ALREADY_INITIALIZED");
+        }
+        s2.accounts.push(account);
+      });
     } catch (e2) {
-      this.state.accounts.pop();
+      if (e2?.message === "ALREADY_INITIALIZED") {
+        return { ok: false, message: "\u7CFB\u7EDF\u5DF2\u521D\u59CB\u5316\uFF08\u5E76\u53D1\u521B\u5EFA\u88AB\u62E6\u622A\uFF09\uFF0C\u8BF7\u76F4\u63A5\u767B\u5F55" };
+      }
       console.error("[Auth] \u8D26\u53F7\u5199\u5165\u4E91\u7AEF\u5931\u8D25:", e2.message);
       return { ok: false, message: `\u8D26\u53F7\u521B\u5EFA\u5931\u8D25\uFF1A\u4E91\u7AEF\u6570\u636E\u5E93\u5199\u5165\u9519\u8BEF\uFF08${e2.message}\uFF09\u3002\u8BF7\u7A0D\u540E\u91CD\u8BD5\uFF0C\u4E0D\u4F1A\u4EA7\u751F\u534A\u6210\u54C1\u8D26\u53F7` };
     }
     try {
       const verified = await readJsonStrict(this.stateKey, { accounts: [], sessions: [], failedAttempts: {} });
       if (!verified.accounts.some((a2) => a2.username === username)) {
-        this.state.accounts.pop();
         console.error("[Auth] \u56DE\u8BFB\u6821\u9A8C\u5931\u8D25\uFF1A\u8D26\u53F7\u672A\u5728\u4E91\u7AEF\u751F\u6548");
         return { ok: false, message: "\u8D26\u53F7\u521B\u5EFA\u5931\u8D25\uFF1A\u5199\u5165\u540E\u56DE\u8BFB\u6821\u9A8C\u672A\u901A\u8FC7\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" };
       }
@@ -43171,55 +43195,59 @@ var AuthService = class {
         const waitMin = Math.ceil((FAILED_WINDOW_MS - since) / 6e4);
         return { ok: false, message: `\u5931\u8D25\u6B21\u6570\u8FC7\u591A\uFF0C\u8BF7\u7EA6 ${waitMin} \u5206\u949F\u540E\u91CD\u8BD5` };
       }
-      delete this.state.failedAttempts[throttleKey];
     }
     const account = this.getAccount(username);
     if (!account || this.hashPassword(password || "", account.salt) !== account.hash) {
       const rec = this.state.failedAttempts[throttleKey] || { count: 0, lastAt: "" };
       rec.count += 1;
       rec.lastAt = (/* @__PURE__ */ new Date()).toISOString();
-      this.state.failedAttempts[throttleKey] = rec;
-      this.persistBackground();
+      await this.mutate((s2) => {
+        s2.failedAttempts[throttleKey] = rec;
+      }, { background: true });
       return { ok: false, message: "\u7528\u6237\u540D\u6216\u5BC6\u7801\u9519\u8BEF" };
     }
-    delete this.state.failedAttempts[throttleKey];
+    await this.mutate((s2) => {
+      delete s2.failedAttempts[throttleKey];
+    }, { background: true });
     const token = await this.issueSession(username);
     return { ok: true, message: "\u767B\u5F55\u6210\u529F", sessionToken: token, username };
   }
   async issueSession(username) {
     const token = crypto3.randomBytes(32).toString("hex");
-    this.state.sessions.push({
+    const session = {
       tokenHash: crypto3.createHash("sha256").update(token).digest("hex"),
       username,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString()
-    });
-    if (this.state.sessions.length > 10) {
-      this.state.sessions = this.state.sessions.slice(-10);
-    }
+    };
     try {
-      await this.persist();
+      await this.mutate((s2) => {
+        s2.sessions.push(session);
+        if (s2.sessions.length > 10) s2.sessions = s2.sessions.slice(-10);
+      });
     } catch (e2) {
-      console.error("[Auth] \u4F1A\u8BDD\u6301\u4E45\u5316\u5931\u8D25\uFF08\u5B9E\u4F8B\u56DE\u6536\u540E\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u767B\u5F55\uFF09:", e2.message);
+      console.error("[Auth] \u4F1A\u8BDD\u6301\u4E45\u5316\u5931\u8D25\uFF08\u5176\u4ED6\u5B9E\u4F8B\u4E0A\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u767B\u5F55\uFF09:", e2.message);
     }
     return token;
   }
   /**
    * 校验会话令牌，返回用户名（无效/过期返回 null）
+   * 说明：基于本实例内存视图；跨实例新签发的会话由 maybeRefresh(30s) 收敛可见。
    */
   validateSession(token) {
     if (!token) return null;
     const tokenHash = crypto3.createHash("sha256").update(token).digest("hex");
-    this.cleanupExpiredSessions();
     const session = this.state.sessions.find((s2) => s2.tokenHash === tokenHash);
-    return session ? session.username : null;
+    if (!session) return null;
+    return new Date(session.expiresAt).getTime() > Date.now() ? session.username : null;
   }
   async logout(token) {
     if (!token) return;
     const tokenHash = crypto3.createHash("sha256").update(token).digest("hex");
-    this.state.sessions = this.state.sessions.filter((s2) => s2.tokenHash !== tokenHash);
     try {
-      await this.persist();
+      await this.mutate((s2) => {
+        s2.sessions = s2.sessions.filter((x2) => x2.tokenHash !== tokenHash);
+      });
     } catch (e2) {
       console.error("[Auth] \u767B\u51FA\u6301\u4E45\u5316\u5931\u8D25\uFF08\u4F1A\u8BDD\u6700\u8FDF 7 \u5929\u81EA\u52A8\u8FC7\u671F\uFF09:", e2.message);
     }
@@ -43237,11 +43265,15 @@ var AuthService = class {
       return { ok: false, message: `\u65B0\u5BC6\u7801\u957F\u5EA6\u81F3\u5C11 ${MIN_PASSWORD_LENGTH} \u4F4D` };
     }
     const salt = crypto3.randomBytes(16).toString("hex");
-    account.salt = salt;
-    account.hash = this.hashPassword(newPassword, salt);
-    this.state.sessions = this.state.sessions.filter((s2) => s2.username !== username);
+    const newHash = this.hashPassword(newPassword, salt);
     try {
-      await this.persist();
+      await this.mutate((s2) => {
+        const target = s2.accounts.find((a2) => a2.username === username);
+        if (!target) throw new Error("\u8D26\u53F7\u4E0D\u5B58\u5728");
+        target.salt = salt;
+        target.hash = newHash;
+        s2.sessions = s2.sessions.filter((x2) => x2.username !== username);
+      });
     } catch (e2) {
       return { ok: false, message: `\u5BC6\u7801\u4FEE\u6539\u5931\u8D25\uFF1A\u4E91\u7AEF\u5199\u5165\u9519\u8BEF\uFF08${e2.message}\uFF09\uFF0C\u539F\u5BC6\u7801\u4ECD\u6709\u6548` };
     }
@@ -43263,11 +43295,13 @@ var AuthService = class {
    * 重置书签采集令牌（旧令牌立即失效）
    */
   async regenerateCollectorToken(username) {
-    const account = this.getAccount(username);
-    if (!account) return { ok: false, message: "\u8D26\u53F7\u4E0D\u5B58\u5728" };
-    account.collectorToken = crypto3.randomBytes(24).toString("hex");
+    const newToken = crypto3.randomBytes(24).toString("hex");
     try {
-      await this.persist();
+      await this.mutate((s2) => {
+        const target = s2.accounts.find((a2) => a2.username === username);
+        if (!target) throw new Error("\u8D26\u53F7\u4E0D\u5B58\u5728");
+        target.collectorToken = newToken;
+      });
     } catch (e2) {
       return { ok: false, message: `\u4EE4\u724C\u91CD\u7F6E\u5931\u8D25\uFF1A\u4E91\u7AEF\u5199\u5165\u9519\u8BEF\uFF08${e2.message}\uFF09\uFF0C\u65E7\u4EE4\u724C\u4ECD\u6709\u6548` };
     }
@@ -43277,7 +43311,12 @@ var AuthService = class {
     const now = Date.now();
     const before = this.state.sessions.length;
     this.state.sessions = this.state.sessions.filter((s2) => new Date(s2.expiresAt).getTime() > now);
-    if (this.state.sessions.length !== before) this.persistBackground();
+    if (this.state.sessions.length !== before) {
+      this.mutate((s2) => {
+        s2.sessions = s2.sessions.filter((x2) => new Date(x2.expiresAt).getTime() > now);
+      }, { background: true }).catch(() => {
+      });
+    }
   }
 };
 
@@ -43922,6 +43961,7 @@ var CollectorServer = class {
   }
   async handle(req, res) {
     await this.auth.ensureReady();
+    await this.auth.maybeRefresh();
     await this.llmClient.ensureReady();
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");

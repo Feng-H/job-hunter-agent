@@ -47,6 +47,7 @@ export class CollectorServer {
 
   public async handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     await this.auth.ensureReady();
+    await this.auth.maybeRefresh(); // 多实例间会话视图 30s 节流收敛（他实例签发/注销的会话可见）
     await this.llmClient.ensureReady();
 
     // 允许跨域（书签采集器从招聘站点跨域提交）
