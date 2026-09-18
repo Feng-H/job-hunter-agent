@@ -6,7 +6,8 @@
     "scan": "tsx scripts/scan-mac.ts",
     "dev": "tsx src/server.ts",
     "server": "tsx src/server.ts",
-    "build": "tsc && node scripts/build-api.mjs && rm -rf dist"
+    "build": "tsc && node scripts/build-api.mjs && rm -rf dist",
+    "test": "tsx scripts/test-regression.ts && tsx scripts/test-auth-persistence.ts && tsx scripts/test-demo-isolation.ts"
   },
   "keywords": [
     "job-hunter",

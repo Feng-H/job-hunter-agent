@@ -12,6 +12,7 @@ import { DEMO_JOBS, DEMO_PROFILE, getDemoAiAnalysis, getDemoTailoredResume } fro
 import { RegionalCareerRadar, RegionalCompanyPortal, PRESET_REGIONAL_PORTALS } from '../discovery/RegionalCareerRadar.js';
 import { CompanyResolver, ExtendedJobPost } from '../discovery/CompanyResolver.js';
 import { readJson, writeJson, getStorage } from '../../storage/index.js';
+import { applyPreferencesUpdate } from './PreferencesService.js';
 
 const SESSION_COOKIE = 'jobhunter_session';
 
@@ -297,7 +298,7 @@ export class CollectorServer {
         return sendJson(200, { code: 0, jobs: DEMO_JOBS, isDemo: true });
       }
       const tracker = (this.agent as any).tracker;
-      await tracker.ensureReady?.();
+      await tracker.reload?.(); // 读板前重载 KV 最新数据，防多实例旧快照
       const records = tracker.getAllRecords();
       return sendJson(200, { code: 0, jobs: records, isDemo: false });
     }
@@ -332,8 +333,9 @@ export class CollectorServer {
       const jobId = parts[3];
       let body = '';
       req.on('data', c => body += c);
-      req.on('end', () => {
+      req.on('end', async () => {
         try {
+          await (this.agent as any).tracker.reload?.(); // 状态写前重载最新数据，防整库旧快照覆盖
           const { action, reason } = JSON.parse(body);
           this.agent.handleUserAction(jobId, action === 'APPROVED' ? 'APPROVED' : 'REJECTED', reason);
           return sendJson(200, { code: 0, message: '操作成功' });
@@ -550,53 +552,8 @@ export class CollectorServer {
           try {
             const data = JSON.parse(body);
             const current: any = await readJson('data/preferences/rules.json', { scenarios: { remote: {}, onsite: {} }, strictRules: {} });
-            current.scenarios = current.scenarios || { remote: {}, onsite: {} };
-            current.scenarios.remote = current.scenarios.remote || {};
-            current.scenarios.onsite = current.scenarios.onsite || {};
-            current.strictRules = current.strictRules || {};
-            current.scoringThresholds = current.scoringThresholds || {};
-
-            // 场景开关
-            if (data.remoteEnabled !== undefined) current.scenarios.remote.enabled = Boolean(data.remoteEnabled);
-            if (data.onsiteEnabled !== undefined) current.scenarios.onsite.enabled = Boolean(data.onsiteEnabled);
-
-            // 目标城市 / 通勤（onsite 场景）
-            if (Array.isArray(data.targetCities) && data.targetCities.length) {
-              current.scenarios.onsite.targetCities = data.targetCities.map((c: string) => String(c).trim()).filter(Boolean);
-            }
-            if (data.homeBase !== undefined) current.scenarios.onsite.homeBase = String(data.homeBase).trim() || '常住地';
-            if (data.commuteMax !== undefined && Number(data.commuteMax) > 0) current.scenarios.onsite.maxCommuteMinutes = Number(data.commuteMax);
-
-            // 薪资底线（onsite + remote 同步）
-            if (data.salaryMin !== undefined) {
-              current.scenarios.onsite.salaryRange = current.scenarios.onsite.salaryRange || {};
-              current.scenarios.onsite.salaryRange.min = Number(data.salaryMin);
-              current.scenarios.remote.salaryRange = current.scenarios.remote.salaryRange || {};
-              current.scenarios.remote.salaryRange.min = Number(data.salaryMin);
-            }
-
-            // 硬性红线
-            if (data.doubleWeekend !== undefined) current.strictRules.mustDoubleWeekend = Boolean(data.doubleWeekend);
-            if (Array.isArray(data.disallowedWorkSchedules) && data.disallowedWorkSchedules.length) {
-              current.strictRules.disallowedWorkSchedules = data.disallowedWorkSchedules;
-            }
-            if (data.maxStaleMonths !== undefined) current.strictRules.maxStaleMonths = Number(data.maxStaleMonths) || 3;
-            if (Array.isArray(data.excludeKeywords)) current.strictRules.excludeKeywords = data.excludeKeywords;
-            if (Array.isArray(data.excludeCompanies)) current.strictRules.excludeCompanies = data.excludeCompanies;
-            if (Array.isArray(data.targetDomains)) current.strictRules.targetDomains = data.targetDomains;
-
-            // 目标职位方向（onsite + remote 同步）
-            if (Array.isArray(data.targetRoles) && data.targetRoles.length) {
-              current.scenarios.onsite.targetRoles = data.targetRoles;
-              current.scenarios.remote.targetRoles = data.targetRoles;
-            }
-
-            // 评分门槛
-            if (data.minScoreToNotify !== undefined) {
-              current.scoringThresholds.minScoreToNotify = Number(data.minScoreToNotify) || 75;
-            }
-
-            await writeJson('data/preferences/rules.json', current);
+            const updated = applyPreferencesUpdate(current, data);
+            await writeJson('data/preferences/rules.json', updated);
             // 同实例内立即生效（跨实例由 ensureFreshConfig 60s 节流刷新兜底）
             try { await this.agent.reloadConfig(); } catch (e) {}
             return sendJson(200, { code: 0, message: '求职偏好设置已更新，初筛规则已即刻生效！' });

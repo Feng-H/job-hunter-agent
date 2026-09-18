@@ -43953,6 +43953,47 @@ var CompanyResolver = class {
 
 // src/modules/server/CollectorServer.ts
 init_storage();
+
+// src/modules/server/PreferencesService.ts
+function applyPreferencesUpdate(current, data) {
+  current = current && typeof current === "object" ? current : {};
+  current.scenarios = current.scenarios || { remote: {}, onsite: {} };
+  current.scenarios.remote = current.scenarios.remote || {};
+  current.scenarios.onsite = current.scenarios.onsite || {};
+  current.strictRules = current.strictRules || {};
+  current.scoringThresholds = current.scoringThresholds || {};
+  if (data.remoteEnabled !== void 0) current.scenarios.remote.enabled = Boolean(data.remoteEnabled);
+  if (data.onsiteEnabled !== void 0) current.scenarios.onsite.enabled = Boolean(data.onsiteEnabled);
+  if (Array.isArray(data.targetCities) && data.targetCities.length) {
+    current.scenarios.onsite.targetCities = data.targetCities.map((c2) => String(c2).trim()).filter(Boolean);
+  }
+  if (data.homeBase !== void 0) current.scenarios.onsite.homeBase = String(data.homeBase).trim() || "\u5E38\u4F4F\u5730";
+  if (data.commuteMax !== void 0 && Number(data.commuteMax) > 0) current.scenarios.onsite.maxCommuteMinutes = Number(data.commuteMax);
+  if (data.salaryMin !== void 0) {
+    current.scenarios.onsite.salaryRange = current.scenarios.onsite.salaryRange || {};
+    current.scenarios.onsite.salaryRange.min = Number(data.salaryMin);
+    current.scenarios.remote.salaryRange = current.scenarios.remote.salaryRange || {};
+    current.scenarios.remote.salaryRange.min = Number(data.salaryMin);
+  }
+  if (data.doubleWeekend !== void 0) current.strictRules.mustDoubleWeekend = Boolean(data.doubleWeekend);
+  if (Array.isArray(data.disallowedWorkSchedules) && data.disallowedWorkSchedules.length) {
+    current.strictRules.disallowedWorkSchedules = data.disallowedWorkSchedules;
+  }
+  if (data.maxStaleMonths !== void 0) current.strictRules.maxStaleMonths = Number(data.maxStaleMonths) || 3;
+  if (Array.isArray(data.excludeKeywords)) current.strictRules.excludeKeywords = data.excludeKeywords;
+  if (Array.isArray(data.excludeCompanies)) current.strictRules.excludeCompanies = data.excludeCompanies;
+  if (Array.isArray(data.targetDomains)) current.strictRules.targetDomains = data.targetDomains;
+  if (Array.isArray(data.targetRoles) && data.targetRoles.length) {
+    current.scenarios.onsite.targetRoles = data.targetRoles;
+    current.scenarios.remote.targetRoles = data.targetRoles;
+  }
+  if (data.minScoreToNotify !== void 0) {
+    current.scoringThresholds.minScoreToNotify = Number(data.minScoreToNotify) || 75;
+  }
+  return current;
+}
+
+// src/modules/server/CollectorServer.ts
 var SESSION_COOKIE = "jobhunter_session";
 var CollectorServer = class {
   server = null;
@@ -44184,7 +44225,7 @@ var CollectorServer = class {
         return sendJson(200, { code: 0, jobs: DEMO_JOBS, isDemo: true });
       }
       const tracker = this.agent.tracker;
-      await tracker.ensureReady?.();
+      await tracker.reload?.();
       const records = tracker.getAllRecords();
       return sendJson(200, { code: 0, jobs: records, isDemo: false });
     }
@@ -44214,8 +44255,9 @@ var CollectorServer = class {
       const jobId = parts[3];
       let body = "";
       req.on("data", (c2) => body += c2);
-      req.on("end", () => {
+      req.on("end", async () => {
         try {
+          await this.agent.tracker.reload?.();
           const { action, reason } = JSON.parse(body);
           this.agent.handleUserAction(jobId, action === "APPROVED" ? "APPROVED" : "REJECTED", reason);
           return sendJson(200, { code: 0, message: "\u64CD\u4F5C\u6210\u529F" });
@@ -44415,40 +44457,8 @@ var CollectorServer = class {
           try {
             const data = JSON.parse(body);
             const current = await readJson("data/preferences/rules.json", { scenarios: { remote: {}, onsite: {} }, strictRules: {} });
-            current.scenarios = current.scenarios || { remote: {}, onsite: {} };
-            current.scenarios.remote = current.scenarios.remote || {};
-            current.scenarios.onsite = current.scenarios.onsite || {};
-            current.strictRules = current.strictRules || {};
-            current.scoringThresholds = current.scoringThresholds || {};
-            if (data.remoteEnabled !== void 0) current.scenarios.remote.enabled = Boolean(data.remoteEnabled);
-            if (data.onsiteEnabled !== void 0) current.scenarios.onsite.enabled = Boolean(data.onsiteEnabled);
-            if (Array.isArray(data.targetCities) && data.targetCities.length) {
-              current.scenarios.onsite.targetCities = data.targetCities.map((c2) => String(c2).trim()).filter(Boolean);
-            }
-            if (data.homeBase !== void 0) current.scenarios.onsite.homeBase = String(data.homeBase).trim() || "\u5E38\u4F4F\u5730";
-            if (data.commuteMax !== void 0 && Number(data.commuteMax) > 0) current.scenarios.onsite.maxCommuteMinutes = Number(data.commuteMax);
-            if (data.salaryMin !== void 0) {
-              current.scenarios.onsite.salaryRange = current.scenarios.onsite.salaryRange || {};
-              current.scenarios.onsite.salaryRange.min = Number(data.salaryMin);
-              current.scenarios.remote.salaryRange = current.scenarios.remote.salaryRange || {};
-              current.scenarios.remote.salaryRange.min = Number(data.salaryMin);
-            }
-            if (data.doubleWeekend !== void 0) current.strictRules.mustDoubleWeekend = Boolean(data.doubleWeekend);
-            if (Array.isArray(data.disallowedWorkSchedules) && data.disallowedWorkSchedules.length) {
-              current.strictRules.disallowedWorkSchedules = data.disallowedWorkSchedules;
-            }
-            if (data.maxStaleMonths !== void 0) current.strictRules.maxStaleMonths = Number(data.maxStaleMonths) || 3;
-            if (Array.isArray(data.excludeKeywords)) current.strictRules.excludeKeywords = data.excludeKeywords;
-            if (Array.isArray(data.excludeCompanies)) current.strictRules.excludeCompanies = data.excludeCompanies;
-            if (Array.isArray(data.targetDomains)) current.strictRules.targetDomains = data.targetDomains;
-            if (Array.isArray(data.targetRoles) && data.targetRoles.length) {
-              current.scenarios.onsite.targetRoles = data.targetRoles;
-              current.scenarios.remote.targetRoles = data.targetRoles;
-            }
-            if (data.minScoreToNotify !== void 0) {
-              current.scoringThresholds.minScoreToNotify = Number(data.minScoreToNotify) || 75;
-            }
-            await writeJson("data/preferences/rules.json", current);
+            const updated = applyPreferencesUpdate(current, data);
+            await writeJson("data/preferences/rules.json", updated);
             try {
               await this.agent.reloadConfig();
             } catch (e2) {
