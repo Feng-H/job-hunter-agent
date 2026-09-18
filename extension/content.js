@@ -412,13 +412,20 @@
   // ================= 悬浮胶囊（手动批量同步入口） =================
   let capsuleEl = null;
 
+  let lastCapsuleState = '';
   function updateCapsule(jobs) {
     if (jobs.length === 0) {
+      lastCapsuleState = '';
       if (capsuleEl) capsuleEl.style.display = 'none';
       return;
     }
 
     const isDetail = jobs.length === 1 && jobs[0].detailCaptured;
+    // 幂等护栏：内容无变化时绝不触碰 DOM。
+    // 否则「观察器回调 → 重写 innerHTML → 再触发观察器」会形成自反馈死循环，页面表现为永远加载中。
+    const state = isDetail ? `d:${jobs[0].title}` : `l:${jobs.length}`;
+    if (state === lastCapsuleState) return;
+    lastCapsuleState = state;
 
     if (!capsuleEl) {
       capsuleEl = document.createElement('div');
@@ -531,9 +538,23 @@
   }
 
   // ================= 启动与 DOM 稳定检测 =================
-  // MutationObserver 防抖：连续 2.5 秒无 DOM 变化视为「页面已稳定」，触发一次自动增量采集
+  // MutationObserver 防抖：连续 2.5 秒无 DOM 变化视为「页面已稳定」，触发一次自动增量采集。
+  // 自身 UI（悬浮胶囊/提示条）的变更必须忽略——否则观察器会被自己的 DOM 写入再次触发，形成死循环。
+  function isOwnUiNode(node) {
+    if (!node) return false;
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    if (!el) return false;
+    return !!(el.id === 'jh-floating-capsule' || el.id === 'jh-auto-toast' ||
+      (el.closest && el.closest('#jh-floating-capsule, #jh-auto-toast')));
+  }
+
   let settleTimer = null;
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver((mutations) => {
+    const isOwnMutation = (m) =>
+      isOwnUiNode(m.target) ||
+      Array.from(m.addedNodes || []).some(isOwnUiNode) ||
+      Array.from(m.removedNodes || []).some(isOwnUiNode);
+    if (mutations.length > 0 && mutations.every(isOwnMutation)) return;
     updateCapsule(extractJobsFromListPage());
     if (settleTimer) clearTimeout(settleTimer);
     settleTimer = setTimeout(autoSyncNewJobs, 2500);
