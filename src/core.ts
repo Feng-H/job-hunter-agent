@@ -8,8 +8,11 @@ import { JobFilter } from './modules/filter/JobFilter.js';
 import { ResumeTailor } from './modules/tailor/ResumeTailor.js';
 import { FeishuNotifier } from './modules/feishu/FeishuClient.js';
 import { ForeignEnterpriseRadar } from './modules/discovery/ForeignEnterpriseRadar.js';
+import { readJson } from './storage/index.js';
 // 说明：ChromePlatformScraper / ChromeCDPClient（依赖 playwright-core）仅在本地扫描时按需动态加载，
 // 避免被打进 Vercel 云函数的冷启动依赖链（nft 打包 playwright 易缺文件导致函数崩溃）
+
+const CONFIG_TTL_MS = 60 * 1000; // 规则/档案热刷新节流：同一实例 60 秒内不重复读 KV
 
 export class JobHunterCore {
   private tracker: JobTracker;
@@ -18,6 +21,7 @@ export class JobHunterCore {
   private tailor: ResumeTailor;
   private feishu: FeishuNotifier;
   private profile: MasterProfile;
+  private lastConfigLoad = 0;
 
   constructor() {
     this.tracker = new JobTracker();
@@ -25,50 +29,77 @@ export class JobHunterCore {
     this.filter = new JobFilter();
     this.tailor = new ResumeTailor();
     this.feishu = new FeishuNotifier();
+    this.profile = this.fsFallbackProfile();
+    void this.refreshProfileFromStorage();
+  }
 
-    const profileDir = path.resolve(process.cwd(), 'data/profile');
+  /** 本地档案兜底：文件存在读文件，否则通用占位（真实档案由存储层异步刷新） */
+  private fsFallbackProfile(): MasterProfile {
     try {
-      if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
-      const profilePath = path.resolve(profileDir, 'master_profile.json');
-      const exampleProfilePath = path.resolve(profileDir, 'master_profile.example.json');
-
-      if (!fs.existsSync(profilePath) && fs.existsSync(exampleProfilePath)) {
-        fs.copyFileSync(exampleProfilePath, profilePath);
+      const profilePath = path.resolve(process.cwd(), 'data/profile/master_profile.json');
+      if (fs.existsSync(profilePath)) {
+        return JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
       }
     } catch {}
+    return { basicInfo: { name: '求职者', title: '专业人才', yearsOfExperience: 5 } } as any;
+  }
 
-    const profilePath = path.resolve(profileDir, 'master_profile.json');
-    if (fs.existsSync(profilePath)) {
-      try {
-        this.profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
-      } catch {
-        this.profile = { basicInfo: { name: '求职者', title: '专业人才', yearsOfExperience: 5 } } as any;
-      }
-    } else {
-      this.profile = { basicInfo: { name: '求职者', title: '专业人才', yearsOfExperience: 5 } } as any;
+  private async refreshProfileFromStorage(): Promise<void> {
+    try {
+      this.profile = await readJson<MasterProfile>('data/profile/master_profile.json', this.profile);
+    } catch (e) {
+      console.warn('[JobHunterCore] 从存储层加载档案失败，沿用当前档案:', (e as Error).message);
     }
+  }
+
+  /**
+   * 处理岗位前确保规则与档案足够新鲜（60 秒节流，云端每批采集自动生效最新偏好）
+   */
+  public async ensureFreshConfig(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastConfigLoad < CONFIG_TTL_MS) return;
+    this.lastConfigLoad = now;
+    await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
   }
 
   /**
    * 动态重新加载最新规则偏好与个人档案（Web看板保存后即时生效）
    */
-  public reloadConfig(): void {
-    try {
-      this.filter.reloadRules();
-      const profilePath = path.resolve(process.cwd(), 'data/profile/master_profile.json');
-      if (fs.existsSync(profilePath)) {
-        this.profile = JSON.parse(fs.readFileSync(profilePath, 'utf-8'));
+  public async reloadConfig(): Promise<void> {
+    this.lastConfigLoad = Date.now();
+    await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
+    console.log('🔄 [JobHunterCore] 规则偏好与个人档案配置已动态重载生效！');
+  }
+
+  /**
+   * 按最新规则批量重筛历史岗位（仅初筛级判定，不消耗 LLM）：
+   * 对 FILTERED_OUT / DISCOVERED 状态的岗位重跑严格过滤器，通过者晋升 PENDING_REVIEW
+   */
+  public async refilterAllJobs(): Promise<{ rechecked: number; promoted: number; stillRejected: number }> {
+    await this.reloadConfig();
+    const memory = this.memoryManager.getMemory();
+    let rechecked = 0, promoted = 0, stillRejected = 0;
+
+    for (const record of this.tracker.getAllRecords()) {
+      if (record.status !== 'FILTERED_OUT' && record.status !== 'DISCOVERED') continue;
+      rechecked++;
+      const verdict = this.filter.evaluate(record.job, this.profile, memory);
+      if (verdict.passed) {
+        this.tracker.updateStatus(record.job.id, 'PENDING_REVIEW', `按最新规则重筛通过（评分 ${verdict.score}）`, { filterResult: verdict });
+        promoted++;
+      } else {
+        this.tracker.updateStatus(record.job.id, 'FILTERED_OUT', verdict.reasons.join('；'), { filterResult: verdict });
+        stillRejected++;
       }
-      console.log('🔄 [JobHunterCore] 规则偏好与个人档案配置已动态重载生效！');
-    } catch (e) {
-      console.warn('⚠️ [JobHunterCore] 动态重载配置异常:', e);
     }
+    return { rechecked, promoted, stillRejected };
   }
 
   /**
    * 处理单个真实岗位（用于书签实时采集或单独推送）
    */
   public async processSingleJob(job: JobPost): Promise<{ approved: boolean; reason?: string }> {
+    await this.ensureFreshConfig();
     const fingerprint = this.tracker.generateFingerprint(job.company, job.title, job.url);
     job.id = fingerprint;
 

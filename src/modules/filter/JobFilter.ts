@@ -3,33 +3,48 @@ import * as path from 'node:path';
 import { JobPost, FilterResult, PreferenceRules, MasterProfile, FeedbackMemory } from '../../types/index.js';
 import { ScheduleChecker } from './ScheduleChecker.js';
 import { CommutePlanner, CommuteEstimate } from './CommutePlanner.js';
+import { readJson, isCloudRuntime } from '../../storage/index.js';
 
 export class JobFilter {
   private rules: PreferenceRules;
   private scheduleChecker: ScheduleChecker;
   private commutePlanner: CommutePlanner;
 
-  constructor(rulesPath: string = path.resolve(process.cwd(), 'data/preferences/rules.json')) {
-    this.rules = this.loadRules(rulesPath);
+  constructor() {
+    // 先用本地文件/内置默认快速就位，再异步从统一存储层（云端 KV）刷新真实规则
+    this.rules = this.fsFallbackRules();
     this.scheduleChecker = new ScheduleChecker();
     this.commutePlanner = new CommutePlanner();
+    void this.refreshRules();
   }
 
-  public reloadRules(rulesPath: string = path.resolve(process.cwd(), 'data/preferences/rules.json')) {
-    this.rules = this.loadRules(rulesPath);
-  }
-
-  private loadRules(rulesPath: string): PreferenceRules {
+  /** 从统一存储层加载规则：云端读 KV（用户在设置页保存的规则），本地读 data/ 文件，均缺失时用本地文件/内置默认兜底 */
+  public async refreshRules(): Promise<void> {
     try {
+      this.rules = await readJson<PreferenceRules>('data/preferences/rules.json', this.fsFallbackRules());
+    } catch (e) {
+      console.warn('[JobFilter] 从存储层加载规则失败，沿用当前规则:', (e as Error).message);
+    }
+  }
+
+  /** 本地文件兜底链：rules.json → rules.example.json → 内置默认（云端 KV 未初始化时直接内置默认，避免误用示例文件的北京配置） */
+  private fsFallbackRules(): PreferenceRules {
+    try {
+      const rulesPath = path.resolve(process.cwd(), 'data/preferences/rules.json');
       if (fs.existsSync(rulesPath)) {
         return JSON.parse(fs.readFileSync(rulesPath, 'utf-8'));
       }
-      const examplePath = path.resolve(process.cwd(), 'data/preferences/rules.example.json');
-      if (fs.existsSync(examplePath)) {
-        return JSON.parse(fs.readFileSync(examplePath, 'utf-8'));
+      if (!isCloudRuntime()) {
+        const examplePath = path.resolve(process.cwd(), 'data/preferences/rules.example.json');
+        if (fs.existsSync(examplePath)) {
+          return JSON.parse(fs.readFileSync(examplePath, 'utf-8'));
+        }
       }
     } catch (e) {}
+    return this.builtinDefaultRules();
+  }
 
+  private builtinDefaultRules(): PreferenceRules {
     return {
       strictRules: {
         mustDoubleWeekend: true,

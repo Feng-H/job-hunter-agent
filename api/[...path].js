@@ -614,29 +614,43 @@ var init_JobFilter = __esm({
     path2 = __toESM(require("node:path"));
     init_ScheduleChecker();
     init_CommutePlanner();
+    init_storage();
     JobFilter = class {
       rules;
       scheduleChecker;
       commutePlanner;
-      constructor(rulesPath = path2.resolve(process.cwd(), "data/preferences/rules.json")) {
-        this.rules = this.loadRules(rulesPath);
+      constructor() {
+        this.rules = this.fsFallbackRules();
         this.scheduleChecker = new ScheduleChecker();
         this.commutePlanner = new CommutePlanner();
+        void this.refreshRules();
       }
-      reloadRules(rulesPath = path2.resolve(process.cwd(), "data/preferences/rules.json")) {
-        this.rules = this.loadRules(rulesPath);
-      }
-      loadRules(rulesPath) {
+      /** 从统一存储层加载规则：云端读 KV（用户在设置页保存的规则），本地读 data/ 文件，均缺失时用本地文件/内置默认兜底 */
+      async refreshRules() {
         try {
+          this.rules = await readJson("data/preferences/rules.json", this.fsFallbackRules());
+        } catch (e2) {
+          console.warn("[JobFilter] \u4ECE\u5B58\u50A8\u5C42\u52A0\u8F7D\u89C4\u5219\u5931\u8D25\uFF0C\u6CBF\u7528\u5F53\u524D\u89C4\u5219:", e2.message);
+        }
+      }
+      /** 本地文件兜底链：rules.json → rules.example.json → 内置默认（云端 KV 未初始化时直接内置默认，避免误用示例文件的北京配置） */
+      fsFallbackRules() {
+        try {
+          const rulesPath = path2.resolve(process.cwd(), "data/preferences/rules.json");
           if (fs2.existsSync(rulesPath)) {
             return JSON.parse(fs2.readFileSync(rulesPath, "utf-8"));
           }
-          const examplePath = path2.resolve(process.cwd(), "data/preferences/rules.example.json");
-          if (fs2.existsSync(examplePath)) {
-            return JSON.parse(fs2.readFileSync(examplePath, "utf-8"));
+          if (!isCloudRuntime()) {
+            const examplePath = path2.resolve(process.cwd(), "data/preferences/rules.example.json");
+            if (fs2.existsSync(examplePath)) {
+              return JSON.parse(fs2.readFileSync(examplePath, "utf-8"));
+            }
           }
         } catch (e2) {
         }
+        return this.builtinDefaultRules();
+      }
+      builtinDefaultRules() {
         return {
           strictRules: {
             mustDoubleWeekend: true,
@@ -1964,7 +1978,7 @@ var init_ChromePlatformScraper = __esm({
 });
 
 // src/core.ts
-var import_config2, fs5, path5, JobHunterCore;
+var import_config2, fs5, path5, CONFIG_TTL_MS, JobHunterCore;
 var init_core = __esm({
   "src/core.ts"() {
     "use strict";
@@ -1977,6 +1991,8 @@ var init_core = __esm({
     init_ResumeTailor();
     init_FeishuClient();
     init_ForeignEnterpriseRadar();
+    init_storage();
+    CONFIG_TTL_MS = 60 * 1e3;
     JobHunterCore = class {
       tracker;
       memoryManager;
@@ -1984,52 +2000,78 @@ var init_core = __esm({
       tailor;
       feishu;
       profile;
+      lastConfigLoad = 0;
       constructor() {
         this.tracker = new JobTracker();
         this.memoryManager = new FeedbackMemoryManager();
         this.filter = new JobFilter();
         this.tailor = new ResumeTailor();
         this.feishu = new FeishuNotifier();
-        const profileDir = path5.resolve(process.cwd(), "data/profile");
+        this.profile = this.fsFallbackProfile();
+        void this.refreshProfileFromStorage();
+      }
+      /** 本地档案兜底：文件存在读文件，否则通用占位（真实档案由存储层异步刷新） */
+      fsFallbackProfile() {
         try {
-          if (!fs5.existsSync(profileDir)) fs5.mkdirSync(profileDir, { recursive: true });
-          const profilePath2 = path5.resolve(profileDir, "master_profile.json");
-          const exampleProfilePath = path5.resolve(profileDir, "master_profile.example.json");
-          if (!fs5.existsSync(profilePath2) && fs5.existsSync(exampleProfilePath)) {
-            fs5.copyFileSync(exampleProfilePath, profilePath2);
+          const profilePath = path5.resolve(process.cwd(), "data/profile/master_profile.json");
+          if (fs5.existsSync(profilePath)) {
+            return JSON.parse(fs5.readFileSync(profilePath, "utf-8"));
           }
         } catch {
         }
-        const profilePath = path5.resolve(profileDir, "master_profile.json");
-        if (fs5.existsSync(profilePath)) {
-          try {
-            this.profile = JSON.parse(fs5.readFileSync(profilePath, "utf-8"));
-          } catch {
-            this.profile = { basicInfo: { name: "\u6C42\u804C\u8005", title: "\u4E13\u4E1A\u4EBA\u624D", yearsOfExperience: 5 } };
-          }
-        } else {
-          this.profile = { basicInfo: { name: "\u6C42\u804C\u8005", title: "\u4E13\u4E1A\u4EBA\u624D", yearsOfExperience: 5 } };
+        return { basicInfo: { name: "\u6C42\u804C\u8005", title: "\u4E13\u4E1A\u4EBA\u624D", yearsOfExperience: 5 } };
+      }
+      async refreshProfileFromStorage() {
+        try {
+          this.profile = await readJson("data/profile/master_profile.json", this.profile);
+        } catch (e2) {
+          console.warn("[JobHunterCore] \u4ECE\u5B58\u50A8\u5C42\u52A0\u8F7D\u6863\u6848\u5931\u8D25\uFF0C\u6CBF\u7528\u5F53\u524D\u6863\u6848:", e2.message);
         }
+      }
+      /**
+       * 处理岗位前确保规则与档案足够新鲜（60 秒节流，云端每批采集自动生效最新偏好）
+       */
+      async ensureFreshConfig() {
+        const now = Date.now();
+        if (now - this.lastConfigLoad < CONFIG_TTL_MS) return;
+        this.lastConfigLoad = now;
+        await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
       }
       /**
        * 动态重新加载最新规则偏好与个人档案（Web看板保存后即时生效）
        */
-      reloadConfig() {
-        try {
-          this.filter.reloadRules();
-          const profilePath = path5.resolve(process.cwd(), "data/profile/master_profile.json");
-          if (fs5.existsSync(profilePath)) {
-            this.profile = JSON.parse(fs5.readFileSync(profilePath, "utf-8"));
+      async reloadConfig() {
+        this.lastConfigLoad = Date.now();
+        await Promise.all([this.filter.refreshRules(), this.refreshProfileFromStorage()]);
+        console.log("\u{1F504} [JobHunterCore] \u89C4\u5219\u504F\u597D\u4E0E\u4E2A\u4EBA\u6863\u6848\u914D\u7F6E\u5DF2\u52A8\u6001\u91CD\u8F7D\u751F\u6548\uFF01");
+      }
+      /**
+       * 按最新规则批量重筛历史岗位（仅初筛级判定，不消耗 LLM）：
+       * 对 FILTERED_OUT / DISCOVERED 状态的岗位重跑严格过滤器，通过者晋升 PENDING_REVIEW
+       */
+      async refilterAllJobs() {
+        await this.reloadConfig();
+        const memory = this.memoryManager.getMemory();
+        let rechecked = 0, promoted = 0, stillRejected = 0;
+        for (const record of this.tracker.getAllRecords()) {
+          if (record.status !== "FILTERED_OUT" && record.status !== "DISCOVERED") continue;
+          rechecked++;
+          const verdict = this.filter.evaluate(record.job, this.profile, memory);
+          if (verdict.passed) {
+            this.tracker.updateStatus(record.job.id, "PENDING_REVIEW", `\u6309\u6700\u65B0\u89C4\u5219\u91CD\u7B5B\u901A\u8FC7\uFF08\u8BC4\u5206 ${verdict.score}\uFF09`, { filterResult: verdict });
+            promoted++;
+          } else {
+            this.tracker.updateStatus(record.job.id, "FILTERED_OUT", verdict.reasons.join("\uFF1B"), { filterResult: verdict });
+            stillRejected++;
           }
-          console.log("\u{1F504} [JobHunterCore] \u89C4\u5219\u504F\u597D\u4E0E\u4E2A\u4EBA\u6863\u6848\u914D\u7F6E\u5DF2\u52A8\u6001\u91CD\u8F7D\u751F\u6548\uFF01");
-        } catch (e2) {
-          console.warn("\u26A0\uFE0F [JobHunterCore] \u52A8\u6001\u91CD\u8F7D\u914D\u7F6E\u5F02\u5E38:", e2);
         }
+        return { rechecked, promoted, stillRejected };
       }
       /**
        * 处理单个真实岗位（用于书签实时采集或单独推送）
        */
       async processSingleJob(job) {
+        await this.ensureFreshConfig();
         const fingerprint = this.tracker.generateFingerprint(job.company, job.title, job.url);
         job.id = fingerprint;
         if (this.tracker.isAlreadyProcessed(fingerprint)) {
@@ -44051,6 +44093,21 @@ var CollectorServer = class {
       const records = tracker.getAllRecords();
       return sendJson(200, { code: 0, jobs: records, isDemo: false });
     }
+    if (req.method === "POST" && pathname === "/api/jobs/refilter") {
+      if (isDemo) {
+        return sendJson(403, { code: -1, error: "\u6F14\u793A\u6A21\u5F0F\u4E0B\u7981\u6B62\u91CD\u7B5B\u771F\u5B9E\u5C97\u4F4D" });
+      }
+      try {
+        const result = await this.agent.refilterAllJobs();
+        return sendJson(200, {
+          code: 0,
+          message: `\u91CD\u7B5B\u5B8C\u6210\uFF1A${result.rechecked} \u4E2A\u5386\u53F2\u5C97\u4F4D\u6309\u6700\u65B0\u89C4\u5219\u91CD\u65B0\u5224\u5B9A\uFF0C${result.promoted} \u4E2A\u664B\u5347\u5F85\u590D\u6838\uFF0C${result.stillRejected} \u4E2A\u4ECD\u88AB\u7EA2\u7EBF\u62E6\u622A`,
+          ...result
+        });
+      } catch (e2) {
+        return sendJson(500, { code: -1, error: e2.message });
+      }
+    }
     if (req.method === "POST" && pathname.startsWith("/api/jobs/") && pathname.endsWith("/action")) {
       if (isDemo) {
         return sendJson(200, {
@@ -44262,23 +44319,46 @@ var CollectorServer = class {
         req.on("end", async () => {
           try {
             const data = JSON.parse(body);
-            const current = await readJson("data/preferences/rules.json", { scenarios: { remote: {}, onsite: {} } });
+            const current = await readJson("data/preferences/rules.json", { scenarios: { remote: {}, onsite: {} }, strictRules: {} });
+            current.scenarios = current.scenarios || { remote: {}, onsite: {} };
+            current.scenarios.remote = current.scenarios.remote || {};
+            current.scenarios.onsite = current.scenarios.onsite || {};
+            current.strictRules = current.strictRules || {};
+            current.scoringThresholds = current.scoringThresholds || {};
             if (data.remoteEnabled !== void 0) current.scenarios.remote.enabled = Boolean(data.remoteEnabled);
             if (data.onsiteEnabled !== void 0) current.scenarios.onsite.enabled = Boolean(data.onsiteEnabled);
+            if (Array.isArray(data.targetCities) && data.targetCities.length) {
+              current.scenarios.onsite.targetCities = data.targetCities.map((c2) => String(c2).trim()).filter(Boolean);
+            }
+            if (data.homeBase !== void 0) current.scenarios.onsite.homeBase = String(data.homeBase).trim() || "\u5E38\u4F4F\u5730";
+            if (data.commuteMax !== void 0 && Number(data.commuteMax) > 0) current.scenarios.onsite.maxCommuteMinutes = Number(data.commuteMax);
             if (data.salaryMin !== void 0) {
               current.scenarios.onsite.salaryRange = current.scenarios.onsite.salaryRange || {};
-              current.scenarios.onsite.salaryRange.min = data.salaryMin;
-              if (current.scenarios.remote) {
-                current.scenarios.remote.salaryRange = current.scenarios.remote.salaryRange || {};
-                current.scenarios.remote.salaryRange.min = data.salaryMin;
-              }
+              current.scenarios.onsite.salaryRange.min = Number(data.salaryMin);
+              current.scenarios.remote.salaryRange = current.scenarios.remote.salaryRange || {};
+              current.scenarios.remote.salaryRange.min = Number(data.salaryMin);
             }
-            if (data.mustDoubleWeekend !== void 0) {
-              current.strictRules = current.strictRules || {};
-              current.strictRules.mustDoubleWeekend = Boolean(data.mustDoubleWeekend);
+            if (data.doubleWeekend !== void 0) current.strictRules.mustDoubleWeekend = Boolean(data.doubleWeekend);
+            if (Array.isArray(data.disallowedWorkSchedules) && data.disallowedWorkSchedules.length) {
+              current.strictRules.disallowedWorkSchedules = data.disallowedWorkSchedules;
+            }
+            if (data.maxStaleMonths !== void 0) current.strictRules.maxStaleMonths = Number(data.maxStaleMonths) || 3;
+            if (Array.isArray(data.excludeKeywords)) current.strictRules.excludeKeywords = data.excludeKeywords;
+            if (Array.isArray(data.excludeCompanies)) current.strictRules.excludeCompanies = data.excludeCompanies;
+            if (Array.isArray(data.targetDomains)) current.strictRules.targetDomains = data.targetDomains;
+            if (Array.isArray(data.targetRoles) && data.targetRoles.length) {
+              current.scenarios.onsite.targetRoles = data.targetRoles;
+              current.scenarios.remote.targetRoles = data.targetRoles;
+            }
+            if (data.minScoreToNotify !== void 0) {
+              current.scoringThresholds.minScoreToNotify = Number(data.minScoreToNotify) || 75;
             }
             await writeJson("data/preferences/rules.json", current);
-            return sendJson(200, { code: 0, message: "\u6C42\u804C\u504F\u597D\u8BBE\u7F6E\u5DF2\u66F4\u65B0\uFF01" });
+            try {
+              await this.agent.reloadConfig();
+            } catch (e2) {
+            }
+            return sendJson(200, { code: 0, message: "\u6C42\u804C\u504F\u597D\u8BBE\u7F6E\u5DF2\u66F4\u65B0\uFF0C\u521D\u7B5B\u89C4\u5219\u5DF2\u5373\u523B\u751F\u6548\uFF01" });
           } catch (e2) {
             return sendJson(400, { code: -1, error: e2.message });
           }

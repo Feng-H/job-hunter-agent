@@ -475,7 +475,10 @@
               </div>
             </div>
 
-            <div class="pt-3 flex justify-end border-t border-slate-100">
+            <div class="pt-3 flex justify-between items-center border-t border-slate-100">
+              <button onclick="refilterAllJobs(this)" class="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <span>🔁 按最新规则重筛全部历史岗位</span>
+              </button>
               <button onclick="savePreferences()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5">
                 <span>💾 保存求职红线配置（即刻生效）</span>
               </button>
@@ -1521,6 +1524,28 @@
         document.getElementById('pref-exclude-companies').value = (data.strictRules?.excludeCompanies || []).join(', ');
       } catch (e) {
         console.error('加载偏好配置失败:', e);
+      }
+    }
+
+    async function refilterAllJobs(btn) {
+      if (!confirm('将按当前保存的最新规则，对所有「初筛淘汰 / 待处理」状态的历史岗位重新执行严格初筛（不消耗 AI 额度）。已人工确认或进入投递流程的岗位不受影响。继续？')) return;
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ 重筛中...</span>';
+      try {
+        const res = await fetch('/api/jobs/refilter', { method: 'POST' });
+        const data = await res.json();
+        if (data.code === 0) {
+          alert('✅ ' + data.message);
+          loadJobs();
+        } else {
+          alert('重筛失败: ' + (data.error || data.message));
+        }
+      } catch (e) {
+        alert('重筛网络异常: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
       }
     }
 
